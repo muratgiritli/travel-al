@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   useColorScheme,
+  I18nManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,8 +26,11 @@ import {
 } from '@workspace/api-client-react';
 
 const PASSPORT_STORAGE_KEY = 'turkey_travel_passport_country';
+const LANGUAGE_STORAGE_KEY = 'turkey_travel_language';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type Lang = 'EN' | 'ES' | 'AR' | 'FR' | 'TR';
 
 type Country = { code: string; name: string; flag: string };
 type ChatMessage = {
@@ -37,6 +41,68 @@ type ChatMessage = {
   createdAt: string;
 };
 type OptimisticMessage = ChatMessage & { optimistic?: boolean };
+
+// ─── Translations ─────────────────────────────────────────────────────────────
+
+const TRANSLATIONS: Record<Lang, Record<string, string>> = {
+  EN: {
+    title: 'Turkey Travel',
+    online: 'Online',
+    welcome: 'Which country issued your passport?',
+    subtitle: "I'll give you tailored visa & entry info for Turkey.",
+    searchCountry: 'Search country...',
+    popular: 'POPULAR',
+    noCountries: 'No countries found',
+    howCanIHelp: 'How can I help you plan your Turkey trip?',
+    messagePlaceholder: 'Message Turkey Travel Assistant...',
+  },
+  ES: {
+    title: 'Turkey Travel',
+    online: 'En línea',
+    welcome: '¿Qué país emitió tu pasaporte?',
+    subtitle: 'Te daré información de visado personalizada para Turquía.',
+    searchCountry: 'Buscar país...',
+    popular: 'POPULAR',
+    noCountries: 'No se encontraron países',
+    howCanIHelp: '¿Cómo puedo ayudarte a planear tu viaje a Turquía?',
+    messagePlaceholder: 'Escribe un mensaje...',
+  },
+  AR: {
+    title: 'Turkey Travel',
+    online: 'متصل',
+    welcome: 'ما هي الدولة التي أصدرت جواز سفرك؟',
+    subtitle: 'سأقدم لك معلومات التأشيرة والدخول المخصصة لتركيا.',
+    searchCountry: '...ابحث عن دولة',
+    popular: 'الأكثر شيوعاً',
+    noCountries: 'لا توجد دول',
+    howCanIHelp: 'كيف يمكنني مساعدتك في التخطيط لرحلتك إلى تركيا؟',
+    messagePlaceholder: '...أرسل رسالة',
+  },
+  FR: {
+    title: 'Turkey Travel',
+    online: 'En ligne',
+    welcome: 'Quel pays a délivré votre passeport ?',
+    subtitle: 'Je vous donnerai des informations visa personnalisées pour la Turquie.',
+    searchCountry: 'Rechercher un pays...',
+    popular: 'POPULAIRE',
+    noCountries: 'Aucun pays trouvé',
+    howCanIHelp: 'Comment puis-je vous aider à planifier votre voyage en Turquie ?',
+    messagePlaceholder: "Message à l'assistant...",
+  },
+  TR: {
+    title: 'Turkey Travel',
+    online: 'Çevrimiçi',
+    welcome: 'Pasaportunuzu hangi ülke verdi?',
+    subtitle: 'Türkiye için özel vize ve giriş bilgisi sunacağım.',
+    searchCountry: 'Ülke ara...',
+    popular: 'POPÜLER',
+    noCountries: 'Ülke bulunamadı',
+    howCanIHelp: 'Türkiye gezinizi planlamanıza nasıl yardımcı olabilirim?',
+    messagePlaceholder: 'Mesaj yazın...',
+  },
+};
+
+const LANGUAGES: Lang[] = ['EN', 'ES', 'AR', 'FR', 'TR'];
 
 // ─── Static fallback country list ─────────────────────────────────────────────
 
@@ -174,16 +240,48 @@ function MessageBubble({ msg, colors }: { msg: OptimisticMessage; colors: Return
   );
 }
 
+// ─── Language cycling button ──────────────────────────────────────────────────
+
+function LangButton({
+  lang,
+  onPress,
+}: {
+  lang: Lang;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID="btn-cycle-language"
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [
+        styles.langButton,
+        pressed && { opacity: 0.7 },
+      ]}
+    >
+      <Text style={styles.langButtonText}>{lang}</Text>
+    </Pressable>
+  );
+}
+
 // ─── Passport Selection Screen ─────────────────────────────────────────────────
 
 function PassportScreen({
   countries,
   onSelect,
   loading,
+  lang,
+  onCycleLang,
+  t,
+  isRTL,
 }: {
   countries: Country[];
   onSelect: (c: Country) => void;
   loading: boolean;
+  lang: Lang;
+  onCycleLang: () => void;
+  t: Record<string, string>;
+  isRTL: boolean;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -206,6 +304,8 @@ function PassportScreen({
     onSelect(c);
   };
 
+  const rtlText = isRTL ? { textAlign: 'right' as const, writingDirection: 'rtl' as const } : {};
+
   const renderCountry = useCallback(
     ({ item }: { item: Country }) => (
       <Pressable
@@ -213,12 +313,13 @@ function PassportScreen({
         onPress={() => handleSelect(item)}
         style={({ pressed }) => [
           styles.countryRow,
+          isRTL && styles.countryRowRTL,
           { borderBottomColor: colors.border },
           pressed && { backgroundColor: colors.muted },
         ]}
       >
         <Text style={styles.countryFlag}>{item.flag}</Text>
-        <Text style={[styles.countryName, { color: colors.foreground }]}>
+        <Text style={[styles.countryName, { color: colors.foreground }, rtlText]}>
           {item.name}
         </Text>
         <Text style={[styles.countryCode, { color: colors.mutedForeground }]}>
@@ -226,7 +327,7 @@ function PassportScreen({
         </Text>
       </Pressable>
     ),
-    [colors],
+    [colors, isRTL],
   );
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -237,6 +338,7 @@ function PassportScreen({
       <View
         style={[
           styles.passportHeader,
+          isRTL && styles.rowRTL,
           {
             paddingTop: topInset + 12,
             backgroundColor: colors.primary,
@@ -244,13 +346,14 @@ function PassportScreen({
         ]}
       >
         <AssistantAvatar size={44} />
-        <View style={{ marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Turkey Travel</Text>
-          <View style={styles.onlineRow}>
+        <View style={[{ marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0, flex: 1 }]}>
+          <Text style={[styles.headerTitle, rtlText]}>{t.title}</Text>
+          <View style={[styles.onlineRow, isRTL && styles.rowRTL]}>
             <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online</Text>
+            <Text style={styles.onlineText}>{t.online}</Text>
           </View>
         </View>
+        <LangButton lang={lang} onPress={onCycleLang} />
       </View>
 
       {/* Welcome card */}
@@ -258,14 +361,16 @@ function PassportScreen({
         <View
           style={[styles.accentBar, { backgroundColor: colors.accent }]}
         />
-        <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>
-          Which country issued your passport?
-        </Text>
-        <Text
-          style={[styles.welcomeSubtitle, { color: colors.mutedForeground }]}
-        >
-          I'll give you tailored visa & entry info for Turkey.
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.welcomeTitle, { color: colors.foreground }, rtlText]}>
+            {t.welcome}
+          </Text>
+          <Text
+            style={[styles.welcomeSubtitle, { color: colors.mutedForeground }, rtlText]}
+          >
+            {t.subtitle}
+          </Text>
+        </View>
       </View>
 
       {/* Search */}
@@ -275,19 +380,21 @@ function PassportScreen({
         <View
           style={[
             styles.searchBox,
+            isRTL && styles.rowRTL,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
           <Feather name="search" size={16} color={colors.mutedForeground} />
           <TextInput
             testID="input-search-country"
-            placeholder="Search country..."
+            placeholder={t.searchCountry}
             placeholderTextColor={colors.mutedForeground}
             value={query}
             onChangeText={setQuery}
-            style={[styles.searchInput, { color: colors.foreground }]}
+            style={[styles.searchInput, { color: colors.foreground }, rtlText]}
             autoCapitalize="none"
             clearButtonMode="while-editing"
+            textAlign={isRTL ? 'right' : 'left'}
           />
         </View>
 
@@ -295,9 +402,9 @@ function PassportScreen({
         {!query && (
           <View style={styles.popularRow}>
             <Text
-              style={[styles.popularLabel, { color: colors.mutedForeground }]}
+              style={[styles.popularLabel, { color: colors.mutedForeground }, rtlText]}
             >
-              Popular
+              {t.popular}
             </Text>
             <FlatList
               horizontal
@@ -352,9 +459,10 @@ function PassportScreen({
               style={[
                 styles.emptyText,
                 { color: colors.mutedForeground },
+                rtlText,
               ]}
             >
-              No countries found
+              {t.noCountries}
             </Text>
           }
           contentContainerStyle={{
@@ -376,6 +484,10 @@ function ChatScreen({
   onChangePassport,
   apiMessages,
   messagesLoading,
+  lang,
+  onCycleLang,
+  t,
+  isRTL,
 }: {
   sessionId: string;
   selectedCountry: Country;
@@ -383,6 +495,10 @@ function ChatScreen({
   onChangePassport: () => void;
   apiMessages: ChatMessage[] | undefined;
   messagesLoading: boolean;
+  lang: Lang;
+  onCycleLang: () => void;
+  t: Record<string, string>;
+  isRTL: boolean;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -392,6 +508,8 @@ function ChatScreen({
   const inputRef = useRef<TextInput>(null);
   const sendMessage = useSendChatMessage();
   const queryClient = useQueryClient();
+
+  const rtlText = isRTL ? { textAlign: 'right' as const, writingDirection: 'rtl' as const } : {};
 
   // Merge API messages with optimistic ones, deduplicated by id
   const allMessages: OptimisticMessage[] = [
@@ -435,7 +553,6 @@ function ChatScreen({
             prev.filter((m) => m.id !== optimisticId),
           );
           // Invalidate so React Query fetches the real message list
-          // (includes both the user message and the assistant reply)
           queryClient.invalidateQueries({
             queryKey: ['chatMessages', currentSessionId],
           });
@@ -464,6 +581,7 @@ function ChatScreen({
       <View
         style={[
           styles.chatHeader,
+          isRTL && styles.rowRTL,
           {
             paddingTop: topInset + 10,
             backgroundColor: colors.primary,
@@ -472,12 +590,13 @@ function ChatScreen({
       >
         <AssistantAvatar size={38} />
         <View style={styles.chatHeaderInfo}>
-          <Text style={styles.chatHeaderTitle}>Turkey Travel</Text>
-          <View style={styles.onlineRow}>
+          <Text style={[styles.chatHeaderTitle, rtlText]}>{t.title}</Text>
+          <View style={[styles.onlineRow, isRTL && styles.rowRTL]}>
             <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online</Text>
+            <Text style={styles.onlineText}>{t.online}</Text>
           </View>
         </View>
+        <LangButton lang={lang} onPress={onCycleLang} />
         <Pressable
           testID="btn-change-passport"
           onPress={onChangePassport}
@@ -527,9 +646,10 @@ function ChatScreen({
                   style={[
                     styles.welcomeIntroText,
                     { color: colors.foreground },
+                    rtlText,
                   ]}
                 >
-                  How can I help you plan your Turkey trip?
+                  {t.howCanIHelp}
                 </Text>
               </View>
             }
@@ -543,6 +663,7 @@ function ChatScreen({
         <View
           style={[
             styles.inputBar,
+            isRTL && styles.rowRTL,
             {
               backgroundColor: colors.card,
               borderTopColor: colors.border,
@@ -555,7 +676,7 @@ function ChatScreen({
             testID="input-message"
             value={input}
             onChangeText={setInput}
-            placeholder="Message Turkey Travel Assistant..."
+            placeholder={t.messagePlaceholder}
             placeholderTextColor={colors.mutedForeground}
             style={[
               styles.textInput,
@@ -564,12 +685,14 @@ function ChatScreen({
                 color: colors.foreground,
                 borderColor: colors.border,
               },
+              rtlText,
             ]}
             multiline
             maxLength={1000}
             returnKeyType="send"
             onSubmitEditing={handleSend}
             blurOnSubmit={false}
+            textAlign={isRTL ? 'right' : 'left'}
           />
           <Pressable
             testID="btn-send"
@@ -610,6 +733,7 @@ export default function HomeScreen() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   // true while we're checking AsyncStorage on first launch
   const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
+  const [lang, setLang] = useState<Lang>('EN');
 
   const { data: apiMessages, isLoading: messagesLoading } = useGetChatMessages(
     sessionId ?? '',
@@ -619,12 +743,23 @@ export default function HomeScreen() {
   const countries: Country[] =
     apiCountries && apiCountries.length > 0 ? apiCountries : STATIC_COUNTRIES;
 
-  // ── Load saved passport on first launch ──────────────────────────────────
+  const t = TRANSLATIONS[lang];
+  const isRTL = lang === 'AR';
+
+  // ── Load saved passport + language on first launch ───────────────────────
   useEffect(() => {
-    AsyncStorage.getItem(PASSPORT_STORAGE_KEY)
-      .then((raw) => {
-        if (raw) {
-          const saved: Country = JSON.parse(raw);
+    Promise.all([
+      AsyncStorage.getItem(PASSPORT_STORAGE_KEY),
+      AsyncStorage.getItem(LANGUAGE_STORAGE_KEY),
+    ])
+      .then(([passportRaw, langRaw]) => {
+        // Restore language
+        if (langRaw && LANGUAGES.includes(langRaw as Lang)) {
+          setLang(langRaw as Lang);
+        }
+        // Restore passport
+        if (passportRaw) {
+          const saved: Country = JSON.parse(passportRaw);
           setSelectedCountry(saved);
           // Auto-create a session so the user lands straight in chat
           createSession.mutate(
@@ -641,6 +776,17 @@ export default function HomeScreen() {
       .catch(() => setIsLoadingPrefs(false));
     // Run once on mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Cycle to next language ───────────────────────────────────────────────
+  const handleCycleLang = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLang((prev) => {
+      const idx = LANGUAGES.indexOf(prev);
+      const next = LANGUAGES[(idx + 1) % LANGUAGES.length];
+      AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, next).catch(() => {/* ignore */});
+      return next;
+    });
   }, []);
 
   // ── Persist + create session when user picks a country ───────────────────
@@ -680,6 +826,10 @@ export default function HomeScreen() {
         onChangePassport={handleChangePassport}
         apiMessages={apiMessages as ChatMessage[] | undefined}
         messagesLoading={messagesLoading}
+        lang={lang}
+        onCycleLang={handleCycleLang}
+        t={t}
+        isRTL={isRTL}
       />
     );
   }
@@ -689,6 +839,10 @@ export default function HomeScreen() {
       countries={countries}
       onSelect={handleSelectCountry}
       loading={countriesLoading || createSession.isPending}
+      lang={lang}
+      onCycleLang={handleCycleLang}
+      t={t}
+      isRTL={isRTL}
     />
   );
 }
@@ -698,6 +852,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   loadingCenter: { alignItems: 'center', justifyContent: 'center' },
+
+  // RTL helpers
+  rowRTL: { flexDirection: 'row-reverse' },
 
   // Passport screen
   passportHeader: {
@@ -786,6 +943,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  countryRowRTL: {
+    flexDirection: 'row-reverse',
+  },
   countryFlag: { fontSize: 22, marginRight: 12 },
   countryName: { flex: 1, fontSize: 15, fontWeight: '500' as const },
   countryCode: { fontSize: 12, fontWeight: '500' as const },
@@ -823,6 +983,20 @@ const styles = StyleSheet.create({
   },
   passportFlag: { fontSize: 16 },
   passportCode: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' as const },
+
+  // Language button
+  langButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  langButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700' as const,
+    letterSpacing: 0.5,
+  },
 
   messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   messageRowUser: { justifyContent: 'flex-end' },
