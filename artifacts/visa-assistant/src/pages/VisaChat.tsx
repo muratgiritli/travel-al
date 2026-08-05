@@ -214,14 +214,14 @@ export default function VisaChat() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: '#f4f6f9' }}
+      className="flex items-center justify-center p-4"
+      style={{ background: '#f4f6f9', minHeight: '100dvh' }}
     >
       <div
         className="w-full flex flex-col overflow-hidden"
         style={{
           maxWidth: 430,
-          height: 'min(860px, calc(100vh - 2rem))',
+          height: 'min(860px, calc(100dvh - 2rem))',
           background: '#fff',
           border: '1px solid #e5e7eb',
           borderRadius: 24,
@@ -320,15 +320,19 @@ export default function VisaChat() {
 
         {/* ── Composer ── */}
         <div
-          className="shrink-0 flex flex-col gap-2 px-3 py-3"
-          style={{ borderTop: '1px solid #e5e7eb', background: '#fff' }}
+          className="shrink-0 flex flex-col gap-2 px-3 pt-3"
+          style={{
+            borderTop: '1px solid #e5e7eb',
+            background: '#fff',
+            paddingBottom: 'max(28px, calc(16px + env(safe-area-inset-bottom)))',
+          }}
         >
           {/* Country selector — no category toggle buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" style={{ minWidth: 0 }}>
             <select
               value={selectedId}
               onChange={e => setSelectedId(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 text-[13px] text-gray-700 bg-white outline-none"
+              className="flex-1 min-w-0 border border-gray-300 rounded-xl px-3 py-2.5 text-[13px] text-gray-700 bg-white outline-none"
               aria-label="Select passport country"
             >
               <option value="">Select your passport country…</option>
