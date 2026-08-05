@@ -72,7 +72,7 @@ router.get("/chat/session/:sessionId/messages", async (req, res): Promise<void> 
   res.json(GetChatMessagesResponse.parse(messages));
 });
 
-// POST /chat/session/:sessionId/messages — send a message and get AI reply
+// POST /chat/session/:sessionId/messages — send a message and stream AI reply via SSE
 router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void> => {
   const params = SendChatMessageParams.safeParse(req.params);
   if (!params.success) {
@@ -125,31 +125,77 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     })),
   ];
 
-  // Call OpenAI
-  let assistantText: string;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      max_tokens: 1024,
-      messages: chatMessages,
-    });
-    assistantText = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
-  } catch (err) {
-    res.status(502).json({ error: "AI service unavailable. Please try again later." });
-    return;
+  const wantsStream = req.headers.accept?.includes("text/event-stream") ?? false;
+
+  if (wantsStream) {
+    // ── SSE streaming path ────────────────────────────────────────────────────
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    let assistantText = "";
+    try {
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 1024,
+        messages: chatMessages,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const token = chunk.choices[0]?.delta?.content ?? "";
+        if (token) {
+          assistantText += token;
+          // Escape newlines so each SSE message stays on one line
+          const escaped = token.replace(/\n/g, "\\n");
+          res.write(`data: ${escaped}\n\n`);
+        }
+      }
+    } catch (err) {
+      res.write(`data: [ERROR] AI service unavailable. Please try again later.\n\n`);
+      res.end();
+      return;
+    }
+
+    // Persist the full assistant reply after stream completes
+    if (assistantText) {
+      await db.insert(chatMessagesTable).values({
+        sessionId: params.data.sessionId,
+        role: "assistant",
+        text: assistantText,
+      });
+    }
+
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } else {
+    // ── Non-streaming JSON path (used by mobile and generated API client) ────
+    let assistantText: string;
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 1024,
+        messages: chatMessages,
+      });
+      assistantText = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
+    } catch (err) {
+      res.status(502).json({ error: "AI service unavailable. Please try again later." });
+      return;
+    }
+
+    // Save and return assistant message
+    const [assistantMessage] = await db
+      .insert(chatMessagesTable)
+      .values({
+        sessionId: params.data.sessionId,
+        role: "assistant",
+        text: assistantText,
+      })
+      .returning();
+
+    res.status(201).json(SendChatMessageResponse.parse(assistantMessage));
   }
-
-  // Save and return assistant message
-  const [assistantMessage] = await db
-    .insert(chatMessagesTable)
-    .values({
-      sessionId: params.data.sessionId,
-      role: "assistant",
-      text: assistantText,
-    })
-    .returning();
-
-  res.status(201).json(SendChatMessageResponse.parse(assistantMessage));
 });
 
 export default router;

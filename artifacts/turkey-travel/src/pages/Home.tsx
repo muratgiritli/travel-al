@@ -16,7 +16,6 @@ import {
   useCreateChatSession,
   useGetChatMessages,
   useGetChatSession,
-  useSendChatMessage,
   useListCountries,
 } from '@workspace/api-client-react';
 
@@ -447,6 +446,10 @@ export default function Home() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  // null = not streaming; string = actively streaming bot reply (grows token by token)
+  const [streamingBotText, setStreamingBotText] = useState<string | null>(null);
+  // Optimistic user message shown during streaming for restored sessions
+  const [streamingUserText, setStreamingUserText] = useState<string | null>(null);
 
   // Local message array — used for NEW conversations (widget architecture)
   const [messages, setMessages] = useState<LocalChatMessage[]>(makeInitialMessages);
@@ -469,7 +472,6 @@ export default function Home() {
   // API hooks
   const { data: apiCountries } = useListCountries();
   const createSession = useCreateChatSession();
-  const sendMessage = useSendChatMessage();
 
   // Used only when restoring a previous session — fetches historical messages
   const { data: apiMessages } = useGetChatMessages(sessionId || '', {
@@ -551,7 +553,7 @@ export default function Home() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, apiMessages, isTyping]);
+  }, [messages, apiMessages, isTyping, streamingBotText]);
 
   // ── Auto-resize textarea ──────────────────────────────────────────────────
 
@@ -642,47 +644,108 @@ export default function Home() {
     setMessages(makeInitialMessages());
   }, []);
 
-  // ── Send message handler ──────────────────────────────────────────────────
+  // ── Send message handler (SSE streaming) ─────────────────────────────────
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const text = inputValue.trim();
-    if (!text || !sessionId) return;
+    if (!text || !sessionId || isTyping || streamingBotText !== null) return;
     setInputValue('');
+
+    if (!isRestored) {
+      appendMessage({ kind: 'user', id: nextId(), text });
+    } else {
+      setStreamingUserText(text);
+    }
+
+    // Show typing indicator until the first token arrives
     setIsTyping(true);
 
-    if (isRestored) {
-      // Restored sessions: invalidate the messages query so the UI refreshes from the server
-      sendMessage.mutate(
-        { sessionId, data: { text } },
-        {
-          onSuccess: () => {
+    let fullText = '';
+    let firstToken = true;
+    let encounteredError = false;
+
+    const finalize = (errorText?: string) => {
+      // Always clear transient streaming + typing state
+      setIsTyping(false);
+      setStreamingBotText(null);
+      setStreamingUserText(null);
+
+      if (errorText) {
+        appendMessage({ kind: 'bot', id: nextId(), text: errorText });
+        return;
+      }
+
+      if (!isRestored) {
+        if (fullText) {
+          appendMessage({ kind: 'bot', id: nextId(), text: fullText });
+        }
+      } else {
+        // Refresh from server so restored session history is up to date
+        queryClient.invalidateQueries({ queryKey: ['chatMessages', sessionId] });
+      }
+    };
+
+    try {
+      const response = await fetch(`/api/chat/session/${sessionId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok || !response.body) {
+        finalize("I'm sorry, I couldn't get a response. Please try again.");
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6);
+          if (payload === '[DONE]') continue;
+
+          // Server signals an AI error — treat as terminal failure
+          if (payload.startsWith('[ERROR]')) {
+            encounteredError = true;
+            break;
+          }
+
+          // Unescape newlines encoded by the server
+          const token = payload.replace(/\\n/g, '\n');
+          fullText += token;
+
+          if (firstToken) {
+            firstToken = false;
+            // Hide typing indicator the moment the first token arrives
             setIsTyping(false);
-            queryClient.invalidateQueries({ queryKey: ['chatMessages', sessionId] });
-          },
-          onError: () => setIsTyping(false),
-        },
-      );
-    } else {
-      // New sessions: optimistic local state
-      appendMessage({ kind: 'user', id: nextId(), text });
-      sendMessage.mutate(
-        { sessionId, data: { text } },
-        {
-          onSuccess: response => {
-            setIsTyping(false);
-            const assistantText =
-              Array.isArray(response)
-                ? response.filter((m: { role: string }) => m.role === 'assistant').at(-1)?.text ?? ''
-                : (response as { text?: string })?.text ?? '';
-            if (assistantText) {
-              appendMessage({ kind: 'bot', id: nextId(), text: assistantText });
-            }
-          },
-          onError: () => setIsTyping(false),
-        },
-      );
+            setStreamingBotText('');
+          }
+          setStreamingBotText(fullText);
+        }
+
+        if (encounteredError) break;
+      }
+    } catch {
+      finalize("I'm sorry, I couldn't get a response. Please try again.");
+      return;
     }
-  }, [inputValue, sessionId, isRestored, appendMessage, sendMessage]);
+
+    if (encounteredError) {
+      finalize("I'm sorry, I couldn't get a response. Please try again.");
+    } else {
+      finalize();
+    }
+  }, [inputValue, sessionId, isRestored, isTyping, streamingBotText, appendMessage, queryClient]);
 
   const isRtl = lang === 'AR';
   const pastSessions = sessionHistory.filter(s => s.id !== sessionId);
@@ -924,7 +987,27 @@ export default function Home() {
               </>
             )}
 
-            {/* Typing indicator — always at the bottom */}
+            {/* Optimistic user message during streaming (restored sessions only) */}
+            {isRestored && streamingUserText !== null && (
+              <div className="flex items-end justify-end gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="bg-[#1A2942] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm text-[14px] max-w-[75%]">
+                  <span className="whitespace-pre-wrap">{streamingUserText}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Streaming bot reply — grows token by token */}
+            {streamingBotText !== null && (
+              <div className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <BotAvatar />
+                <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-[14px] text-gray-800 max-w-[85%] leading-relaxed whitespace-pre-wrap">
+                  {streamingBotText}
+                  <span className="inline-block w-[2px] h-[14px] bg-gray-400 ml-0.5 align-middle animate-pulse" />
+                </div>
+              </div>
+            )}
+
+            {/* Typing indicator — shown until the first streaming token arrives */}
             {isTyping && (
               <div className="flex items-start gap-2 animate-in fade-in duration-200">
                 <BotAvatar />
@@ -999,7 +1082,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!isUnlocked || !inputValue.trim() || isTyping}
+                disabled={!isUnlocked || !inputValue.trim() || isTyping || streamingBotText !== null}
                 className="w-9 h-9 rounded-full bg-[#1A2942] flex items-center justify-center text-white shrink-0 disabled:opacity-30 disabled:bg-gray-300 disabled:text-gray-500 transition-all mb-0.5"
                 data-testid="btn-send"
                 aria-label="Send"
