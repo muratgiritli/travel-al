@@ -274,6 +274,7 @@ function PassportScreen({
   onCycleLang,
   t,
   isRTL,
+  showRestoreError,
 }: {
   countries: Country[];
   onSelect: (c: Country) => void;
@@ -282,6 +283,7 @@ function PassportScreen({
   onCycleLang: () => void;
   t: Record<string, string>;
   isRTL: boolean;
+  showRestoreError?: boolean;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -372,6 +374,16 @@ function PassportScreen({
           </Text>
         </View>
       </View>
+
+      {/* Error notice when auto-login failed */}
+      {showRestoreError && (
+        <View style={[styles.restoreErrorBanner, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+          <Ionicons name="warning-outline" size={15} color="#DC2626" />
+          <Text style={[styles.restoreErrorText, { color: '#DC2626' }]}>
+            Couldn't restore your previous session. Please select your passport again.
+          </Text>
+        </View>
+      )}
 
       {/* Search */}
       <View
@@ -849,6 +861,8 @@ export default function HomeScreen() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   // true while we're checking AsyncStorage on first launch
   const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
+  // set to true when auto-login fails so the user sees a brief error notice
+  const [autoLoginError, setAutoLoginError] = useState(false);
   const [lang, setLang] = useState<Lang>('EN');
 
   const { data: apiMessages, isLoading: messagesLoading } = useGetChatMessages(
@@ -879,7 +893,15 @@ export default function HomeScreen() {
           setIsLoadingPrefs(false);
           return;
         }
-        const saved: Country = JSON.parse(passportRaw);
+        let saved: Country;
+        try {
+          saved = JSON.parse(passportRaw);
+        } catch {
+          // Corrupted storage — remove the bad entry and show passport selection
+          AsyncStorage.removeItem(PASSPORT_STORAGE_KEY).catch(() => {/* ignore */});
+          setIsLoadingPrefs(false);
+          return;
+        }
         setSelectedCountry(saved);
 
         // Try to restore the previous session before falling back to a new one
@@ -911,6 +933,15 @@ export default function HomeScreen() {
               AsyncStorage.setItem(SESSION_STORAGE_KEY, session.id).catch(
                 () => {/* ignore */},
               );
+            },
+            onError: () => {
+              // Auto-login failed — clear the stored passport so the user starts fresh,
+              // and show a brief error notice on the passport selection screen
+              AsyncStorage.multiRemove([PASSPORT_STORAGE_KEY, SESSION_STORAGE_KEY]).catch(
+                () => {/* ignore */},
+              );
+              setSelectedCountry(null);
+              setAutoLoginError(true);
             },
             onSettled: () => setIsLoadingPrefs(false),
           },
@@ -995,6 +1026,7 @@ export default function HomeScreen() {
       onCycleLang={handleCycleLang}
       t={t}
       isRTL={isRTL}
+      showRestoreError={autoLoginError}
     />
   );
 }
@@ -1207,6 +1239,23 @@ const styles = StyleSheet.create({
   trimNoticeText: {
     fontSize: 11,
     textAlign: 'center',
+  },
+
+  restoreErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  restoreErrorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   inputBar: {
