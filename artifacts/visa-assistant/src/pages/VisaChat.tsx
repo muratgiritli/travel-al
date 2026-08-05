@@ -350,7 +350,6 @@ export default function VisaChat() {
             <select className="text-[12px] font-semibold border border-gray-200 rounded-full px-2.5 py-1 bg-gray-50 text-gray-700" aria-label="Language">
               <option>EN</option>
             </select>
-            <Link href="/admin" className="text-[12px] text-gray-500 hover:text-gray-700 font-medium">Admin</Link>
           </div>
         </header>
 
