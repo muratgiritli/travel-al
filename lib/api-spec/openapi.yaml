@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Turkey Travel Assistant API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: countries
+    description: Country data
+  - name: chat
+    description: Chat operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,89 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /countries:
+    get:
+      operationId: listCountries
+      tags: [countries]
+      summary: List all countries
+      description: Returns all countries with flag emoji and ISO code
+      responses:
+        "200":
+          description: List of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Country"
+
+  /chat/session:
+    post:
+      operationId: createChatSession
+      tags: [chat]
+      summary: Create a chat session
+      description: Start a new chat session with a selected passport country
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSession"
+
+  /chat/session/{sessionId}/messages:
+    get:
+      operationId: getChatMessages
+      tags: [chat]
+      summary: Get chat messages
+      description: Returns all messages in a chat session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a chat message
+      description: Send a user message and receive an AI response
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent and assistant replied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +121,60 @@ components:
       required:
         - status
 
+    Country:
+      type: object
+      required: [code, name, flag]
+      properties:
+        code:
+          type: string
+          description: ISO 3166-1 alpha-2 country code (e.g. PK)
+        name:
+          type: string
+          description: Full country name
+        flag:
+          type: string
+          description: Flag emoji
+
+    SessionInput:
+      type: object
+      required: [passportCountryCode]
+      properties:
+        passportCountryCode:
+          type: string
+          description: ISO 3166-1 alpha-2 code of the user's passport country
+
+    ChatSession:
+      type: object
+      required: [id, passportCountryCode, createdAt]
+      properties:
+        id:
+          type: string
+        passportCountryCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    ChatMessage:
+      type: object
+      required: [id, sessionId, role, text, createdAt]
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

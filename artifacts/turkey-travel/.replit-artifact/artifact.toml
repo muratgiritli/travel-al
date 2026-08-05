@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Turkey Travel Assistant"
+description = "A premium AI chat assistant for Turkey travel planning. Users first select their passport country inside the chat interface, then get personalized travel guidance. Mobile-first, desktop-responsive chat UI inspired by modern AI assistants."
+version = "1.0.0"
+id = "artifacts/turkey-travel"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23499
+
+[services.development]
+run = "pnpm --filter @workspace/turkey-travel run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/turkey-travel", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/turkey-travel/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23499"
+BASE_PATH = "/"

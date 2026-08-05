@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface SessionInput {
+  /** ISO 3166-1 alpha-2 code of the user's passport country */
+  passportCountryCode: string;
 }
