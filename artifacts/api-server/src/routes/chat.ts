@@ -111,6 +111,11 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     .where(eq(chatMessagesTable.sessionId, params.data.sessionId))
     .orderBy(asc(chatMessagesTable.createdAt));
 
+  // Cap history at the last 20 messages to control API costs and avoid
+  // exceeding the context window. The system prompt is always included.
+  const MAX_HISTORY_MESSAGES = 20;
+  const cappedHistory = history.slice(-MAX_HISTORY_MESSAGES);
+
   const systemPrompt =
     `You are a Turkey travel expert. The user holds a ${session.passportCountryCode} passport. ` +
     `Answer only Turkey travel questions — visa requirements, destinations, accommodation, food, ` +
@@ -119,7 +124,7 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
 
   const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
-    ...history.map((m) => ({
+    ...cappedHistory.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.text,
     })),
