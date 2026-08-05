@@ -6,8 +6,14 @@ import { eq } from "drizzle-orm";
 import { db, visaCountryOverridesTable } from "@workspace/db";
 import OpenAI from "openai";
 
-// Strip any non-ASCII characters (e.g. smart quotes accidentally pasted into the secret)
-const openai = new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() });
+// Prefer the Replit AI Integrations proxy (no user API key / credits needed);
+// fall back to a direct OpenAI key if the proxy env vars are missing.
+const openai = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+  ? new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "",
+    })
+  : new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() });
 
 const router: IRouter = Router();
 
