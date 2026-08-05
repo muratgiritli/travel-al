@@ -1,0 +1,80 @@
+Replit Agent’a yapıştır:
+
+---
+
+**PROMPT:**
+
+Build age-based country pages inspired by https://evisacity.com/egypt for our Turkey Travel Assistant.
+
+### Category
+`age_special` — 4 countries from `data/age-special-countries.json`:
+1. Algeria (`/algeria`) — Cezayir / DZ  
+2. Iraq (`/iraq`) — Irak / IQ  
+3. Libya (`/libya`) — Libya / LY  
+4. Egypt (`/egypt`) — Mısır / EG  
+
+### Routing rules
+- Site opening `/` = passport country picker only (NO `/visa` landing)
+- Selecting one of these 4 countries opens `/{slug}` page (e.g. `/egypt`)
+- Do NOT redirect to evisa.gov.tr
+- All APPLY NOW buttons go to internal `/next` or `/apply/{slug}`
+- Country name always dynamic
+
+### Page structure (like evisacity Egypt)
+
+**Hero**
+- Pills: `TURKEY` + `{COUNTRY}`
+- Title: `Get Your E-Visa`
+- Subtitle: `for {Country} Citizens`
+- Section: `Choose Your Category` / pathways based on age + situation
+
+**Travel requirements card**
+- Passport validity: min 180 days
+- Stay/entry from country data
+
+**Pathway cards (age + condition based)**
+
+Use each country’s `age_bands` from JSON:
+
+**Egypt example (must match evisacity logic):**
+1. **Under 15 or over 45** → direct e-Visa path (no Schengen precondition) + APPLY NOW  
+2. **Residence permit path** ($60) → eligible residence countries tags + APPLY NOW  
+3. **Valid visa path** ($60) → Schengen / USA / UK / Ireland + APPLY NOW  
+4. **Gulf residence support** ($20) → UAE/Saudi/Qatar/Kuwait/Oman/Bahrain + APPLY NOW  
+5. **Sticker visa consultancy** ($20) → embassy support bullets + APPLY NOW  
+
+Also show for Egypt ages 15–45: airline condition note  
+(Turkish Airlines, AJet, Pegasus, EgyptAir, Air Cairo)
+
+**Algeria / Iraq / Libya**
+- Show age bands clearly (exempt vs conditional e-Visa)
+- Then same style option cards where relevant:
+  - conditional e-Visa with Schengen/USA/UK/Ireland
+  - support/consultancy options
+- Always show orange note: `Insurance required`
+
+### UI
+- Mobile-first, clean cards, APPLY NOW on each option
+- Bottom nav: Home / Track / FAQ / Contact
+- Floating AI chat button opens assistant for that country
+
+### Data source
+Use exactly:
+`data/age-special-countries.json`
+
+Admin should later edit:
+- age bands
+- option prices/texts
+- eligible country lists
+- HTML notes
+
+### Acceptance
+1. `/` country picker works  
+2. Egypt opens `/egypt` with age pathways like evisacity  
+3. Algeria/Iraq/Libya pages work from same template  
+4. No evisa.gov.tr links  
+5. `npm start` works + give public URL  
+
+---
+
+ZIP: `age-special-countries.zip` (JSON + liste) zaten hazır.

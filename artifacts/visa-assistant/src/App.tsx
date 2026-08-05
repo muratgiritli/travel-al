@@ -1,6 +1,7 @@
 import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
 import VisaChat from '@/pages/VisaChat';
 import Admin from '@/pages/Admin';
+import CountryPage from '@/pages/CountryPage';
 import NotFound from '@/pages/not-found';
 
 function Router() {
@@ -11,6 +12,8 @@ function Router() {
       <Route path="/visa"><Redirect to="/" /></Route>
       <Route path="/" component={VisaChat} />
       <Route path="/admin" component={Admin} />
+      {/* Country landing pages: /bangladesh, /egypt, /algeria, etc. */}
+      <Route path="/:countrySlug" component={CountryPage} />
       <Route component={NotFound} />
     </Switch>
   );

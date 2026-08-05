@@ -1,0 +1,99 @@
+Replit Agent’a yapıştır:
+
+---
+
+**PROMPT:**
+
+Build a mobile-first country landing page inspired by https://evisacity.com/bangladesh (same information structure and UX flow), for our Turkey Travel Assistant app.
+
+### Important rules
+- Opening site root `/` must stay the passport country picker (NOT `/visa/`)
+- After selecting a **conditional e-Visa** country (example: Bangladesh), open this country page
+- Do NOT redirect users to evisa.gov.tr
+- All APPLY NOW buttons go to our internal application route `/next` (or `/apply/{country}`)
+- Country name must be dynamic (`{Country}`)
+
+### Page URL
+`/{country-slug}`  
+Example: `/bangladesh`
+
+### Page layout (match evisacity structure)
+
+**Header**
+- Brand: Turkey Travel Assistant (or Turkey Visa Office style)
+- Dark mode toggle + menu
+
+**Hero**
+- Two pills: `TURKEY` + `{COUNTRY}` (e.g. BANGLADESH)
+- H1: `Get Your E-Visa`
+- H2: `for {Country} Citizens`
+
+**Travel Requirements card**
+- Title: `Travel Requirements for Turkey (2026):`
+- Passport validity: Minimum 180 days
+- Maximum stay: use country data (for Bangladesh: 30 Days, Single Entry)
+
+**Option cards (stacked, mobile-first)**
+
+**OPTION 1 — Get a Turkey E-Visa**
+- Condition: If you have a valid residence permit in any of the following countries
+- Price: `$60 USD` (configurable)
+- Info: e-visa + travel info delivered by email; delivery between 60 minutes and 7 days
+- Show country tags grid (Schengen/EU + UK/USA/Canada/Australia/Japan/South Korea style list like evisacity)
+- Button: `APPLY NOW`
+
+**OPTION 2 — Get a Turkey E-Visa**
+- Condition: If you have a valid visa to any of the following countries
+- Price: `$60 USD`
+- Text: valid physical visa from Schengen Area, USA, UK, or Ireland → eligible for online e-visa
+- Tags: Schengen Area, United States, United Kingdom, Ireland
+- Button: `APPLY NOW`
+
+**OPTION 3 / Support — Get a Turkey Visa**
+- Condition: If you have a valid residence permit in GCC countries
+- Price: `$20 USD`
+- Countries: UAE, Saudi Arabia, Qatar, Kuwait, Oman, Bahrain
+- 30-day holiday visa stream text (like evisacity)
+- Button: `APPLY NOW`
+
+**OPTION 4 — Sticker Visa Consultancy**
+- Embassy sticker visa consultancy
+- Price: `$20 USD`
+- Bullet points: document prep, appointment coordination, form/biometric support, tracking
+- Button: `APPLY NOW`
+
+**Bottom nav**
+- Home / Track / FAQ / Contact
+
+**Floating AI button**
+- Opens Turkey Travel Assistant chat for that country
+
+### Data
+Use our conditional e-Visa countries from:
+`data/evisa-conditional-countries.json`
+
+Start with Bangladesh fully matching the evisacity content structure, then make the same template work for all 13 conditional countries:
+Afghanistan, Bangladesh, Cabo Verde, Equatorial Guinea, Philippines, Palestine, India, Nepal, Pakistan, Senegal, Sri Lanka, Taiwan, Yemen.
+
+For each country, fields should be editable in admin later:
+- stay length
+- entry type
+- option prices
+- option texts
+- eligible country lists
+- insurance required = true always shown near CTA
+
+### Also show on every option card
+- Orange badge/note: `Insurance required`
+- CTA never links externally to government e-visa sites
+
+### Acceptance
+1. `/` = country picker
+2. Selecting Bangladesh opens `/bangladesh` with this options page
+3. All APPLY NOW go internal
+4. Mobile looks clean like evisacity
+5. `npm start` works and give public URL
+
+---
+
+İstersen bir sonraki mesajda bunu **sadece Bangladeş** için daha kısa “tek ülke” promptuna da sıkıştırırım.

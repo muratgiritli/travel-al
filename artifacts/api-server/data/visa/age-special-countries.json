@@ -1,0 +1,105 @@
+{
+  "category": "age_special",
+  "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
+  "note": "Age-based rules for ordinary passports. Reference UX: https://evisacity.com/egypt. Apply inside assistant — no evisa.gov.tr redirect.",
+  "defaults": {
+    "category": "age_special",
+    "insurance_required": true,
+    "cta": "APPLY NOW",
+    "cta_href": "/next",
+    "is_active": true,
+    "admin_html_notes": "",
+    "ai_extra_context": ""
+  },
+  "countries": [
+    {
+      "id": "dz",
+      "name": "Algeria",
+      "name_tr": "Cezayir",
+      "iso2": "DZ",
+      "flag_emoji": "🇩🇿",
+      "slug": "algeria",
+      "visa_summary": "Age-based rules",
+      "age_bands": [
+        {
+          "label": "Under 15 or over 50",
+          "status": "visa_exempt",
+          "detail": "Visa-exempt for up to 90 days within any 180-day period."
+        },
+        {
+          "label": "Ages 15–18 and 35–50",
+          "status": "conditional_evisa",
+          "detail": "30-day single-entry e-Visa if holding valid Schengen / USA / UK / Ireland visa or residence and meeting conditions."
+        }
+      ],
+      "stay_rule": "Algerian ordinary passport rules depend on age: under 15 and over 50 are visa-exempt (90/180). Ages 15–18 and 35–50 may get a 30-day single-entry e-Visa with Schengen/USA/UK/Ireland visa or residence."
+    },
+    {
+      "id": "iq",
+      "name": "Iraq",
+      "name_tr": "Irak",
+      "iso2": "IQ",
+      "flag_emoji": "🇮🇶",
+      "slug": "iraq",
+      "visa_summary": "Age-based rules",
+      "age_bands": [
+        {
+          "label": "Under 15 or over 50",
+          "status": "visa_exempt",
+          "detail": "Visa-exempt for up to 90 days within any 180-day period."
+        },
+        {
+          "label": "Ages 15–50",
+          "status": "conditional_evisa",
+          "detail": "Up to 30-day single-entry e-Visa if holding valid Schengen / USA / UK / Ireland visa or residence and meeting conditions."
+        }
+      ],
+      "stay_rule": "Iraqi ordinary passport rules depend on age: under 15 and over 50 are visa-exempt (90/180). Ages 15–50 may get up to 30-day single-entry e-Visa with Schengen/USA/UK/Ireland visa or residence."
+    },
+    {
+      "id": "ly",
+      "name": "Libya",
+      "name_tr": "Libya",
+      "iso2": "LY",
+      "flag_emoji": "🇱🇾",
+      "slug": "libya",
+      "visa_summary": "Age-based rules",
+      "age_bands": [
+        {
+          "label": "Under 16 or over 45",
+          "status": "visa_exempt",
+          "detail": "Visa-exempt for tourism up to 90 days within any 180-day period."
+        },
+        {
+          "label": "Ages 16–45",
+          "status": "conditional_evisa",
+          "detail": "30-day e-Visa if holding valid Schengen / USA / UK / Ireland visa or residence and meeting conditions."
+        }
+      ],
+      "stay_rule": "Libyan ordinary passport rules depend on age: under 16 and over 45 are visa-exempt for tourism (90/180). Ages 16–45 need visa; may get 30-day e-Visa with Schengen/USA/UK/Ireland visa or residence."
+    },
+    {
+      "id": "eg",
+      "name": "Egypt",
+      "name_tr": "Mısır",
+      "iso2": "EG",
+      "flag_emoji": "🇪🇬",
+      "slug": "egypt",
+      "visa_summary": "Age-based rules",
+      "age_bands": [
+        {
+          "label": "Under 15 or over 45",
+          "status": "direct_evisa",
+          "detail": "Can obtain e-Visa without Schengen/USA/UK/Ireland precondition."
+        },
+        {
+          "label": "Ages 15–45",
+          "status": "conditional_evisa",
+          "detail": "30-day single-entry e-Visa if holding valid Schengen / USA / UK / Ireland visa or residence AND flying with Turkish Airlines, AJet, Pegasus, EgyptAir or Air Cairo."
+        }
+      ],
+      "stay_rule": "Egyptian ordinary passport holders need a visa. Under 15 and over 45 can get e-Visa without precondition. Ages 15–45 need Schengen/USA/UK/Ireland visa or residence and must travel with THY, AJet, Pegasus, EgyptAir or Air Cairo for 30-day single-entry e-Visa.",
+      "ai_extra_context": "Egypt 15–45 also requires airline condition: Turkish Airlines, AJet, Pegasus, EgyptAir or Air Cairo. Reference UX: https://evisacity.com/egypt"
+    }
+  ]
+}

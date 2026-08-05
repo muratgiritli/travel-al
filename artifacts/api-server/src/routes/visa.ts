@@ -8,29 +8,53 @@ const router: IRouter = Router();
 // dist/index.mjs → dist/ → artifacts/api-server/ → data/visa/
 const __dirname_compat = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname_compat, "..", "data", "visa");
-const EXEMPT_PATH  = join(DATA_DIR, "visa-exempt-countries.json");
-const EVISA_PATH   = join(DATA_DIR, "evisa-direct-countries.json");
-const OVERRIDES_PATH = join(DATA_DIR, "country-overrides.json");
+const EXEMPT_PATH      = join(DATA_DIR, "visa-exempt-countries.json");
+const EVISA_PATH       = join(DATA_DIR, "evisa-direct-countries.json");
+const CONDITIONAL_PATH  = join(DATA_DIR, "evisa-conditional-countries.json");
+const AGE_SPECIAL_PATH    = join(DATA_DIR, "age-special-countries.json");
+const STICKER_PATH        = join(DATA_DIR, "sticker-mission-countries.json");
+const OVERRIDES_PATH      = join(DATA_DIR, "country-overrides.json");
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+interface AgeBand { label: string; status: string; detail: string; }
 interface RawCountry {
   id: string; name: string; name_tr?: string; iso2: string; flag_emoji: string;
+  slug?: string;
   visa_summary?: string; stay_rule?: string; insurance_required?: boolean;
   admin_html_notes?: string; ai_extra_context?: string; is_active?: boolean;
   headline?: string; features?: string[];
   price_label?: string; price_example?: string; cta?: string; cta_href?: string;
+  age_bands?: AgeBand[];
+  precondition?: string;
 }
-interface ExemptFile  { defaults: Record<string, unknown>; countries: RawCountry[]; }
-interface EvisaFile   { countries?: RawCountry[]; [k: string]: unknown; }
+interface ExemptFile       { defaults: Record<string, unknown>; countries: RawCountry[]; }
+interface EvisaFile        { countries?: RawCountry[]; [k: string]: unknown; }
+interface ConditionalFile  { defaults: Record<string, unknown>; countries: RawCountry[]; }
+interface AgeSpecialFile    { defaults: Record<string, unknown>; countries: RawCountry[]; }
+interface StickerFile      { defaults: Record<string, unknown>; countries: RawCountry[]; }
 interface Override     {
   visa_summary?: string; stay_rule?: string; insurance_required?: boolean;
   admin_html_notes?: string; ai_extra_context?: string; is_active?: boolean;
 }
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
+
+const CONDITIONAL_DEFAULTS: Partial<RawCountry> = {
+  insurance_required: true,
+  headline: "Conditional e-Visa — prerequisite + insurance required",
+  features: [
+    "Schengen / USA / UK / Ireland visa or residence usually required",
+    "Travel insurance is mandatory",
+    "Apply here — no redirect to evisa.gov.tr",
+  ],
+  price_label: "Next step: verify eligibility + apply",
+  price_example: "Tap APPLY NOW to continue.",
+  cta: "APPLY NOW",
+  cta_href: "/next",
+};
 
 const EVISA_DEFAULTS: Partial<RawCountry> = {
   insurance_required: true,
@@ -97,13 +121,71 @@ function loadAll() {
     };
   });
 
-  return [...exempt, ...evisa];
+  const condFile  = readJson<ConditionalFile>(CONDITIONAL_PATH, { defaults: {}, countries: [] });
+  const condDefs  = condFile.defaults || {};
+  const conditional = (condFile.countries || []).map((c) => {
+    const o = overrides[c.id] || {};
+    return {
+      ...CONDITIONAL_DEFAULTS, ...condDefs, ...c, ...o,
+      category: "evisa_conditional" as const,
+      insurance_required: true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
+      is_active: o.is_active ?? (c as { is_active?: boolean }).is_active ?? true,
+      cta: "APPLY NOW",
+      cta_href: `/apply/${c.id}`,
+      precondition: o.visa_summary
+        ? undefined
+        : (c as { precondition?: string }).precondition ?? (condDefs as { precondition?: string }).precondition,
+    };
+  });
+
+  // age_special
+  const ageFile = readJson<AgeSpecialFile>(AGE_SPECIAL_PATH, { defaults: {}, countries: [] });
+  const ageDefs = ageFile.defaults || {};
+  const ageSpecial = (ageFile.countries || []).map((c) => {
+    const o = overrides[c.id] || {};
+    return {
+      ...ageDefs, ...c, ...o,
+      category: "age_special" as const,
+      insurance_required: true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
+      is_active: o.is_active ?? c.is_active ?? true,
+      cta: "APPLY NOW",
+      cta_href: `/apply/${c.slug || c.id}`,
+      age_bands: c.age_bands || [],
+    };
+  });
+
+  // sticker_mission
+  const stickerFile = readJson<StickerFile>(STICKER_PATH, { defaults: {}, countries: [] });
+  const stickerDefs = stickerFile.defaults || {};
+  const sticker = (stickerFile.countries || []).map((c) => {
+    const o = overrides[c.id] || {};
+    return {
+      ...stickerDefs, ...c, ...o,
+      category: "sticker_mission" as const,
+      insurance_required: true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
+      is_active: o.is_active ?? c.is_active ?? true,
+      cta: "APPLY NOW",
+      cta_href: `/apply/${c.slug || c.id}`,
+    };
+  });
+
+  return [...exempt, ...evisa, ...conditional, ...ageSpecial, ...sticker];
 }
 
 function getCountry(idOrIso: string) {
   const key = String(idOrIso || "").toLowerCase();
   return loadAll().find(
-    (c) => c.id === key || c.iso2.toLowerCase() === key || c.name.toLowerCase() === key,
+    (c) =>
+      c.id === key ||
+      c.iso2.toLowerCase() === key ||
+      c.name.toLowerCase() === key ||
+      ((c as RawCountry).slug || "").toLowerCase() === key,
   );
 }
 

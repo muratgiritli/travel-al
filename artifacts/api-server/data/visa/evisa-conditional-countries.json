@@ -1,0 +1,159 @@
+{
+  "category": "evisa_conditional",
+  "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
+  "note": "Ordinary passport holders who may get e-Visa only with valid Schengen/US/UK/Ireland visa or residence (or similar conditions). Apply inside this assistant — no evisa.gov.tr redirect.",
+  "defaults": {
+    "category": "evisa_conditional",
+    "insurance_required": true,
+    "visa_summary": "Conditional e-Visa",
+    "precondition": "Valid Schengen, USA, UK or Ireland visa or residence permit required",
+    "stay_rule": "You may obtain an e-Visa only if you hold a valid Schengen / USA / UK / Ireland visa or residence permit and meet the stated conditions.",
+    "headline": "Conditional e-Visa — prerequisite + insurance required",
+    "features": [
+      "Schengen / USA / UK / Ireland visa or residence usually required",
+      "Travel insurance is mandatory",
+      "Apply here in this assistant"
+    ],
+    "price_label": "Next step: verify eligibility + apply",
+    "price_example": "Tap APPLY NOW to continue. We do not send you to evisa.gov.tr.",
+    "cta": "APPLY NOW",
+    "cta_href": "/next",
+    "is_active": true,
+    "admin_html_notes": "",
+    "ai_extra_context": ""
+  },
+  "countries": [
+    {
+      "id": "af",
+      "name": "Afghanistan",
+      "name_tr": "Afganistan",
+      "iso2": "AF",
+      "flag_emoji": "🇦🇫",
+      "visa_summary": "Conditional e-Visa",
+      "precondition": "Specific eligibility conditions required",
+      "stay_rule": "Afghan ordinary, service and special passport holders may obtain an e-Visa only if they meet the required conditions."
+    },
+    {
+      "id": "bd",
+      "name": "Bangladesh",
+      "name_tr": "Bangladeş",
+      "iso2": "BD",
+      "flag_emoji": "🇧🇩",
+      "visa_summary": "Conditional e-Visa • 30 days",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Bangladeshi ordinary passport holders may obtain an e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "cv",
+      "name": "Cabo Verde",
+      "name_tr": "Cabo Verde",
+      "iso2": "CV",
+      "flag_emoji": "🇨🇻",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Cabo Verde ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "gq",
+      "name": "Equatorial Guinea",
+      "name_tr": "Ekvator Ginesi",
+      "iso2": "GQ",
+      "flag_emoji": "🇬🇶",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Equatorial Guinea ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "ph",
+      "name": "Philippines",
+      "name_tr": "Filipinler",
+      "iso2": "PH",
+      "flag_emoji": "🇵🇭",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Philippine ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "ps",
+      "name": "Palestine",
+      "name_tr": "Filistin",
+      "iso2": "PS",
+      "flag_emoji": "🇵🇸",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Palestinian ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "in",
+      "name": "India",
+      "name_tr": "Hindistan",
+      "iso2": "IN",
+      "flag_emoji": "🇮🇳",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Indian service, special and ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions. Transit visas via missions are limited to max 3 days.",
+      "ai_extra_context": "Transit visa via Turkish missions: max 3 days for ordinary passport holders."
+    },
+    {
+      "id": "np",
+      "name": "Nepal",
+      "name_tr": "Nepal",
+      "iso2": "NP",
+      "flag_emoji": "🇳🇵",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Nepalese ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions. Otherwise mission visas apply (entry up to 15 days / transit up to 7 days)."
+    },
+    {
+      "id": "pk",
+      "name": "Pakistan",
+      "name_tr": "Pakistan",
+      "iso2": "PK",
+      "flag_emoji": "🇵🇰",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / UK / USA visa required",
+      "stay_rule": "Pakistani ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, UK or USA visa.",
+      "ai_extra_context": "MFA text for Pakistan lists Schengen, UK or USA visa (Ireland not listed)."
+    },
+    {
+      "id": "sn",
+      "name": "Senegal",
+      "name_tr": "Senegal",
+      "iso2": "SN",
+      "flag_emoji": "🇸🇳",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Senegalese ordinary/service passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    },
+    {
+      "id": "lk",
+      "name": "Sri Lanka",
+      "name_tr": "Sri Lanka",
+      "iso2": "LK",
+      "flag_emoji": "🇱🇰",
+      "visa_summary": "Conditional e-Visa",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Sri Lankan passport holders may obtain an e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit."
+    },
+    {
+      "id": "tw",
+      "name": "Taiwan",
+      "name_tr": "Tayvan",
+      "iso2": "TW",
+      "flag_emoji": "🇹🇼",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Specific eligibility conditions required",
+      "stay_rule": "Taiwan ordinary passport holders may obtain a 30-day single-entry e-Visa if they meet the stated conditions."
+    },
+    {
+      "id": "ye",
+      "name": "Yemen",
+      "name_tr": "Yemen",
+      "iso2": "YE",
+      "flag_emoji": "🇾🇪",
+      "visa_summary": "Conditional e-Visa • 30 days single entry",
+      "precondition": "Valid Schengen / USA / UK / Ireland visa or residence required",
+      "stay_rule": "Yemeni ordinary passport holders may obtain a 30-day single-entry e-Visa if they hold a valid Schengen, USA, UK or Ireland visa or residence permit and meet the stated conditions."
+    }
+  ]
+}

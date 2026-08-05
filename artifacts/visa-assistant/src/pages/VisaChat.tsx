@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 
 interface Country {
   id: string; name: string; iso2: string; flag_emoji: string;
@@ -144,6 +144,7 @@ export default function VisaChat() {
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     fetch('/api/visa/countries')
@@ -164,9 +165,19 @@ export default function VisaChat() {
       addMsg({ role: 'bot', text: 'Please select your passport country first.' });
       return;
     }
+    // Non-exempt categories → open full landing page
+    if (
+      country.category === 'evisa_conditional' ||
+      country.category === 'age_special' ||
+      country.category === 'sticker_mission'
+    ) {
+      const slug = (country as { slug?: string }).slug || country.id;
+      navigate(`/${slug}`);
+      return;
+    }
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
     addMsg({ role: 'system', text: 'Passport selected.' });
-    addMsg({ role: 'user', text: country.category === 'evisa_direct' ? 'Do I need a visa for Turkey?' : 'Do I need a visa for Turkey?' });
+    addMsg({ role: 'user', text: 'Do I need a visa for Turkey?' });
     setLoading(true);
     try {
       const res = await fetch('/api/visa/chat', {
