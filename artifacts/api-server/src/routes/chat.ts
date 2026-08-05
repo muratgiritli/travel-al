@@ -182,15 +182,28 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     res.flushHeaders();
 
     let assistantText = "";
+    let clientDisconnected = false;
+    let openaiStream: Awaited<ReturnType<typeof openai.chat.completions.create>> & { controller?: AbortController } | null = null;
+
+    // Abort the OpenAI stream as soon as the client disconnects
+    req.on("close", () => {
+      clientDisconnected = true;
+      if (openaiStream && "controller" in openaiStream && openaiStream.controller) {
+        openaiStream.controller.abort();
+        console.log(`[chat] Client disconnected mid-stream for session ${params.data.sessionId}; OpenAI stream aborted.`);
+      }
+    });
+
     try {
-      const stream = await openai.chat.completions.create({
+      openaiStream = await openai.chat.completions.create({
         model: "gpt-4o",
         max_tokens: 1024,
         messages: chatMessages,
         stream: true,
       });
 
-      for await (const chunk of stream) {
+      for await (const chunk of openaiStream) {
+        if (clientDisconnected) break;
         const token = chunk.choices[0]?.delta?.content ?? "";
         if (token) {
           assistantText += token;
@@ -199,13 +212,28 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
           res.write(`data: ${escaped}\n\n`);
         }
       }
-    } catch (err) {
-      res.write(`data: [ERROR] AI service unavailable. Please try again later.\n\n`);
-      res.end();
-      return;
+    } catch (err: unknown) {
+      // Ignore AbortError — that's an intentional client-disconnect abort
+      const isAbort =
+        err instanceof Error && (err.name === "AbortError" || err.message?.includes("aborted"));
+      if (!isAbort) {
+        if (!clientDisconnected) {
+          res.write(`data: [ERROR] AI service unavailable. Please try again later.\n\n`);
+        }
+        res.end();
+        // Still persist any partial text we accumulated before the error
+        if (assistantText) {
+          await db.insert(chatMessagesTable).values({
+            sessionId: params.data.sessionId,
+            role: "assistant",
+            text: assistantText,
+          });
+        }
+        return;
+      }
     }
 
-    // Persist the full assistant reply after stream completes
+    // Persist whatever text was accumulated (full response or partial on disconnect)
     if (assistantText) {
       await db.insert(chatMessagesTable).values({
         sessionId: params.data.sessionId,
@@ -214,7 +242,9 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
       });
     }
 
-    res.write("data: [DONE]\n\n");
+    if (!clientDisconnected) {
+      res.write("data: [DONE]\n\n");
+    }
     res.end();
   } else {
     // ── Non-streaming JSON path (used by mobile and generated API client) ────
