@@ -7,7 +7,7 @@ import {
   Mic,
   Send,
   ChevronDown,
-  Building2,
+  Check,
 } from 'lucide-react';
 import {
   useCreateChatSession,
@@ -16,7 +16,41 @@ import {
   useListCountries,
 } from '@workspace/api-client-react';
 
-// ─── Translations ────────────────────────────────────────────────────────────
+// ─── Mosque SVG icon ─────────────────────────────────────────────────────────
+
+function MosqueIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Left minaret */}
+      <rect x="0.5" y="9.5" width="2.5" height="10.5" rx="0.4" />
+      <polygon points="1.75,5.5 0.5,9.5 3,9.5" />
+      <circle cx="1.75" cy="5.2" r="0.7" />
+      {/* Right minaret */}
+      <rect x="21" y="9.5" width="2.5" height="10.5" rx="0.4" />
+      <polygon points="22.25,5.5 21,9.5 23.5,9.5" />
+      <circle cx="22.25" cy="5.2" r="0.7" />
+      {/* Dome */}
+      <path d="M6 13.5 C6 8.8 9 6.5 12 6.5 C15 6.5 18 8.8 18 13.5 Z" />
+      {/* Body */}
+      <rect x="4" y="13.5" width="16" height="6.5" rx="0.4" />
+      {/* Door arch */}
+      <path d="M10.5 20 L10.5 17.2 Q12 15.4 13.5 17.2 L13.5 20 Z" fill="white" opacity="0.55" />
+    </svg>
+  );
+}
+
+// ─── Flag image helper ────────────────────────────────────────────────────────
+
+/** Returns a reliable flag image URL from flagcdn.com */
+const flagUrl = (code: string) =>
+  `https://flagcdn.com/w20/${code.toLowerCase()}.png`;
+
+// ─── Translations ─────────────────────────────────────────────────────────────
 
 type Lang = 'EN' | 'ES' | 'AR' | 'FR' | 'TR';
 
@@ -68,7 +102,7 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     searchCountry: 'Rechercher un pays',
     popular: 'Populaire',
     lockedPlaceholder: 'Sélectionnez votre pays…',
-    unlockedPlaceholder: 'Message à l\'assistant...',
+    unlockedPlaceholder: "Message à l'assistant...",
     howCanIHelp: 'Comment puis-je vous aider ?',
     footer: 'Conseils IA · Experts voyage disponibles.',
     noCountries: 'Aucun pays trouvé.',
@@ -89,84 +123,103 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
 };
 
 const LANGUAGES: { code: Lang; label: string }[] = [
-  { code: 'EN', label: 'EN' },
-  { code: 'ES', label: 'ES' },
-  { code: 'AR', label: 'AR' },
-  { code: 'FR', label: 'FR' },
-  { code: 'TR', label: 'TR' },
+  { code: 'EN', label: 'English' },
+  { code: 'ES', label: 'Español' },
+  { code: 'AR', label: 'العربية' },
+  { code: 'FR', label: 'Français' },
+  { code: 'TR', label: 'Türkçe' },
 ];
 
-// ─── Country data ─────────────────────────────────────────────────────────────
+// ─── Country data (static fallback) ──────────────────────────────────────────
 
 const STATIC_COUNTRIES = [
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
-  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
-  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: 'IR', name: 'Iran', flag: '🇮🇷' },
-  { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
-  { code: 'JO', name: 'Jordan', flag: '🇯🇴' },
-  { code: 'LB', name: 'Lebanon', flag: '🇱🇧' },
-  { code: 'OM', name: 'Oman', flag: '🇴🇲' },
-  { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
-  { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
-  { code: 'BH', name: 'Bahrain', flag: '🇧🇭' },
-  { code: 'YE', name: 'Yemen', flag: '🇾🇪' },
-  { code: 'DZ', name: 'Algeria', flag: '🇩🇿' },
-  { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
-  { code: 'TN', name: 'Tunisia', flag: '🇹🇳' },
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
-  { code: 'PE', name: 'Peru', flag: '🇵🇪' },
-  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
-  { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
-  { code: 'GR', name: 'Greece', flag: '🇬🇷' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
-  { code: 'KZ', name: 'Kazakhstan', flag: '🇰🇿' },
-  { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' },
-  { code: 'AZ', name: 'Azerbaijan', flag: '🇦🇿' },
-  { code: 'TM', name: 'Turkmenistan', flag: '🇹🇲' },
-  { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
-  { code: 'AM', name: 'Armenia', flag: '🇦🇲' },
-  { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
+  { code: 'SA', name: 'Saudi Arabia' },
+  { code: 'EG', name: 'Egypt' },
+  { code: 'AE', name: 'United Arab Emirates' },
+  { code: 'CN', name: 'China' },
+  { code: 'PK', name: 'Pakistan' },
+  { code: 'IN', name: 'India' },
+  { code: 'PH', name: 'Philippines' },
+  { code: 'US', name: 'United States' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'RU', name: 'Russia' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'ZA', name: 'South Africa' },
+  { code: 'NG', name: 'Nigeria' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'MY', name: 'Malaysia' },
+  { code: 'ID', name: 'Indonesia' },
+  { code: 'TH', name: 'Thailand' },
+  { code: 'VN', name: 'Vietnam' },
+  { code: 'BD', name: 'Bangladesh' },
+  { code: 'LK', name: 'Sri Lanka' },
+  { code: 'NP', name: 'Nepal' },
+  { code: 'IR', name: 'Iran' },
+  { code: 'IQ', name: 'Iraq' },
+  { code: 'JO', name: 'Jordan' },
+  { code: 'LB', name: 'Lebanon' },
+  { code: 'OM', name: 'Oman' },
+  { code: 'QA', name: 'Qatar' },
+  { code: 'KW', name: 'Kuwait' },
+  { code: 'BH', name: 'Bahrain' },
+  { code: 'YE', name: 'Yemen' },
+  { code: 'DZ', name: 'Algeria' },
+  { code: 'MA', name: 'Morocco' },
+  { code: 'TN', name: 'Tunisia' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'CO', name: 'Colombia' },
+  { code: 'PE', name: 'Peru' },
+  { code: 'CL', name: 'Chile' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'NO', name: 'Norway' },
+  { code: 'DK', name: 'Denmark' },
+  { code: 'FI', name: 'Finland' },
+  { code: 'PL', name: 'Poland' },
+  { code: 'GR', name: 'Greece' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'IE', name: 'Ireland' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'KZ', name: 'Kazakhstan' },
+  { code: 'UZ', name: 'Uzbekistan' },
+  { code: 'AZ', name: 'Azerbaijan' },
+  { code: 'TM', name: 'Turkmenistan' },
+  { code: 'GE', name: 'Georgia' },
+  { code: 'AM', name: 'Armenia' },
+  { code: 'UA', name: 'Ukraine' },
 ];
 
 const POPULAR_CODES = ['SA', 'EG', 'AE', 'CN', 'PK', 'IN', 'PH'];
+
+// ─── Reusable flag image ──────────────────────────────────────────────────────
+
+function FlagImg({ code, size = 20 }: { code: string; size?: number }) {
+  return (
+    <img
+      src={flagUrl(code)}
+      alt={code}
+      width={size}
+      height={Math.round(size * 0.75)}
+      className="rounded-[2px] object-cover shrink-0"
+      loading="lazy"
+      onError={e => {
+        // Hide broken images gracefully
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -193,11 +246,15 @@ export default function Home() {
   });
   const sendMessage = useSendChatMessage();
 
-  const countries = apiCountries?.length ? apiCountries : STATIC_COUNTRIES;
+  // Normalise country list — only need code + name (flag from CDN)
+  const countries: { code: string; name: string }[] =
+    apiCountries?.length
+      ? apiCountries.map(c => ({ code: c.code, name: c.name }))
+      : STATIC_COUNTRIES;
 
   const popularCountries = POPULAR_CODES
     .map(code => countries.find(c => c.code === code))
-    .filter(Boolean) as typeof countries;
+    .filter(Boolean) as { code: string; name: string }[];
 
   const filteredCountries = countries.filter(
     c =>
@@ -218,15 +275,22 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [apiMessages, isTyping, sessionId]);
 
-  // Close lang menu on outside click
+  // Close lang menu on outside click OR Escape
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const clickHandler = (e: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
         setLangMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLangMenuOpen(false);
+    };
+    document.addEventListener('mousedown', clickHandler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', clickHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, []);
 
   const handleSelectCountry = (countryCode: string) => {
@@ -261,10 +325,15 @@ export default function Home() {
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       {/* ── Centered panel ── */}
-      <div className="w-full max-w-[720px] flex flex-col bg-white overflow-hidden" style={{ height: '100dvh' }}>
-
+      <div
+        className="w-full max-w-[720px] flex flex-col bg-white overflow-hidden"
+        style={{ height: '100dvh' }}
+      >
         {/* ── Header ── */}
-        <header className="flex items-center justify-between px-3 py-2.5 bg-white border-b shrink-0 z-10" style={{ minHeight: 56 }}>
+        <header
+          className="flex items-center justify-between px-3 py-2.5 bg-white border-b shrink-0 z-10"
+          style={{ minHeight: 56 }}
+        >
           {/* Left: back + logo + title */}
           <div className="flex items-center gap-2 min-w-0">
             <button
@@ -274,14 +343,19 @@ export default function Home() {
             >
               <ChevronLeft className="w-5 h-5 text-gray-700" />
             </button>
+
+            {/* Gold mosque logo */}
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center">
-                <Building2 className="w-[18px] h-[18px] text-amber-600" />
+              <div className="w-9 h-9 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+                <MosqueIcon className="w-[20px] h-[20px] text-amber-500" />
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
             </div>
+
             <div className="min-w-0">
-              <p className="font-semibold text-[14px] leading-tight text-gray-900 truncate">{t.title}</p>
+              <p className="font-semibold text-[14px] leading-tight text-gray-900 truncate">
+                {t.title}
+              </p>
               <p className="text-[11px] text-green-600 font-medium">{t.online}</p>
             </div>
           </div>
@@ -292,24 +366,33 @@ export default function Home() {
             <div className="relative" ref={langMenuRef}>
               <button
                 onClick={() => setLangMenuOpen(v => !v)}
-                className="flex items-center gap-0.5 px-2 py-1 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 text-[12px] font-semibold text-gray-700 transition-colors"
+                className="flex items-center gap-0.5 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 text-[12px] font-semibold text-gray-700 transition-colors"
                 data-testid="btn-lang-selector"
                 aria-label="Select language"
+                aria-expanded={langMenuOpen}
               >
                 {lang}
-                <ChevronDown className="w-3 h-3 text-gray-500" />
+                <ChevronDown
+                  className={`w-3 h-3 text-gray-500 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {langMenuOpen && (
-                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden min-w-[64px]">
+                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden min-w-[120px]">
                   {LANGUAGES.map(l => (
                     <button
                       key={l.code}
-                      onClick={() => { setLang(l.code); setLangMenuOpen(false); }}
-                      className={`w-full px-3 py-2 text-[13px] font-medium text-left hover:bg-gray-50 transition-colors ${lang === l.code ? 'text-blue-700 bg-blue-50' : 'text-gray-700'}`}
+                      onClick={() => {
+                        setLang(l.code);
+                        setLangMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-[13px] font-medium hover:bg-gray-50 transition-colors ${
+                        lang === l.code ? 'text-blue-700 bg-blue-50' : 'text-gray-700'
+                      }`}
                       data-testid={`btn-lang-${l.code}`}
                     >
-                      {l.label}
+                      <span>{l.label}</span>
+                      {lang === l.code && <Check className="w-3.5 h-3.5 text-blue-600" />}
                     </button>
                   ))}
                 </div>
@@ -332,8 +415,8 @@ export default function Home() {
 
             {/* Welcome bubble */}
             <div className="flex items-start gap-2">
-              <div className="w-8 h-8 rounded-full bg-amber-100 shrink-0 flex items-center justify-center shadow-sm">
-                <Building2 className="w-4 h-4 text-amber-600" />
+              <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
+                <MosqueIcon className="w-4 h-4 text-amber-500" />
               </div>
               <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-[14px] text-gray-800 max-w-[85%] leading-relaxed">
                 {t.welcome}
@@ -346,7 +429,9 @@ export default function Home() {
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 ml-10 animate-in fade-in slide-in-from-bottom-3 duration-400"
                 data-testid="passport-selector"
               >
-                <h3 className="font-semibold text-[14px] text-gray-800 mb-2.5">{t.myPassport}</h3>
+                <h3 className="font-semibold text-[14px] text-gray-800 mb-2.5">
+                  {t.myPassport}
+                </h3>
 
                 {/* Search input */}
                 <div className="relative mb-3">
@@ -364,17 +449,26 @@ export default function Home() {
                 {/* Popular chips */}
                 {!searchQuery && (
                   <div className="mb-2.5">
-                    <p className="text-[11px] text-gray-400 font-medium mb-1.5">{t.popular}</p>
+                    <p className="text-[11px] text-gray-400 font-medium mb-1.5 uppercase tracking-wide">
+                      {t.popular}
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {popularCountries.map(c => (
                         <button
                           key={c.code}
                           onClick={() => handleSelectCountry(c.code)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:bg-gray-50 active:scale-95 transition-all text-[12px] font-medium"
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all active:scale-95 text-[12px] font-semibold ${
+                            selectedCountry === c.code
+                              ? 'border-[#1A2942] bg-[#1A2942] text-white'
+                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                          }`}
                           data-testid={`btn-popular-${c.code}`}
                         >
-                          <span className="text-base leading-none">{c.flag}</span>
-                          <span className="text-gray-700">{c.code}</span>
+                          <FlagImg code={c.code} size={16} />
+                          <span>{c.code}</span>
+                          {selectedCountry === c.code && (
+                            <Check className="w-3 h-3" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -387,18 +481,24 @@ export default function Home() {
                     <button
                       key={c.code}
                       onClick={() => handleSelectCountry(c.code)}
-                      className="w-full flex items-center justify-between px-2 py-2.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+                      className={`w-full flex items-center justify-between px-2 py-2.5 rounded-xl transition-colors text-left ${
+                        selectedCountry === c.code
+                          ? 'bg-blue-50'
+                          : 'hover:bg-gray-50 active:bg-gray-100'
+                      }`}
                       data-testid={`btn-country-${c.code}`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-lg leading-none">{c.flag}</span>
+                        <FlagImg code={c.code} size={20} />
                         <span className="font-medium text-[14px] text-gray-800">{c.name}</span>
                       </div>
                       <span className="text-[12px] text-gray-400 font-medium">{c.code}</span>
                     </button>
                   ))}
                   {filteredCountries.length === 0 && (
-                    <p className="text-center py-4 text-[13px] text-gray-400">{t.noCountries}</p>
+                    <p className="text-center py-4 text-[13px] text-gray-400">
+                      {t.noCountries}
+                    </p>
                   )}
                 </div>
               </div>
@@ -409,15 +509,16 @@ export default function Home() {
               <>
                 {selectedCountryData && (
                   <div className="flex items-end justify-end gap-2 animate-in fade-in slide-in-from-right-3 duration-300">
-                    <div className="bg-[#1A2942] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm text-[14px] max-w-[75%]">
-                      {selectedCountryData.flag} {selectedCountryData.code}
+                    <div className="bg-[#1A2942] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm text-[14px] max-w-[75%] flex items-center gap-2">
+                      <FlagImg code={selectedCountryData.code} size={18} />
+                      <span>{selectedCountryData.code}</span>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150 fill-mode-both">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 shrink-0 flex items-center justify-center shadow-sm">
-                    <Building2 className="w-4 h-4 text-amber-600" />
+                  <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
+                    <MosqueIcon className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-[14px] text-gray-800 max-w-[85%] leading-relaxed">
                     {t.howCanIHelp}
@@ -430,8 +531,8 @@ export default function Home() {
                     className={`flex ${msg.role === 'user' ? 'items-end justify-end' : 'items-start'} gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-amber-100 shrink-0 flex items-center justify-center shadow-sm">
-                        <Building2 className="w-4 h-4 text-amber-600" />
+                      <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
+                        <MosqueIcon className="w-4 h-4 text-amber-500" />
                       </div>
                     )}
                     <div
@@ -449,8 +550,8 @@ export default function Home() {
                 {/* Typing indicator */}
                 {isTyping && (
                   <div className="flex items-start gap-2 animate-in fade-in duration-200">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 shrink-0 flex items-center justify-center shadow-sm">
-                      <Building2 className="w-4 h-4 text-amber-600" />
+                    <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
+                      <MosqueIcon className="w-4 h-4 text-amber-500" />
                     </div>
                     <div className="bg-white px-4 py-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
@@ -469,7 +570,12 @@ export default function Home() {
         {/* ── Composer ── */}
         <div
           className="bg-white shrink-0 border-t border-gray-100"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)', paddingTop: 8, paddingLeft: 12, paddingRight: 12 }}
+          style={{
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            paddingTop: 8,
+            paddingLeft: 12,
+            paddingRight: 12,
+          }}
         >
           <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-3xl px-1.5 py-1 focus-within:bg-white focus-within:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <button
@@ -520,12 +626,11 @@ export default function Home() {
             )}
           </div>
 
-          {/* Trust footer — single line, never overlaps composer */}
+          {/* Trust footer — single line */}
           <p className="text-center text-[11px] text-gray-400 mt-1.5 leading-none">
             {t.footer}
           </p>
         </div>
-
       </div>
     </div>
   );
