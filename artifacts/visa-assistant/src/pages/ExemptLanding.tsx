@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
+import type { PricingSettings } from '@/lib/settings';
 
 interface CountryData {
   id: string;
@@ -23,13 +24,14 @@ export default function ExemptLanding() {
   const params = useParams<{ countrySlug: string }>();
   const slug = params.countrySlug;
   const [country, setCountry] = useState<CountryData | null>(null);
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) { setLoading(false); return; }
     fetch(`/api/travel/countries/${slug}`)
       .then(r => (r.ok ? r.json() : Promise.reject()))
-      .then(d => { setCountry(d.country ?? null); setLoading(false); })
+      .then(d => { setCountry(d.country ?? null); setPricing(d.pricing ?? null); setLoading(false); })
       .catch(() => { setCountry(null); setLoading(false); });
   }, [slug]);
 
@@ -105,11 +107,13 @@ export default function ExemptLanding() {
               );
             })}
           </div>
-          {country.price_label && (
+          {pricing?.insurance && (
             <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
-              <div className="font-semibold text-[14px] text-gray-900">{country.price_label}</div>
-              {country.price_example && (
-                <div className="text-[12px] text-gray-500 mt-0.5">{country.price_example}</div>
+              <div className="font-semibold text-[14px] text-gray-900">
+                Travel insurance from ${pricing.insurance.daily_price}/day{pricing.insurance.per_traveler ? ' per traveler' : ''}
+              </div>
+              {pricing.insurance.example_text && (
+                <div className="text-[12px] text-gray-500 mt-0.5">{pricing.insurance.example_text}</div>
               )}
             </div>
           )}

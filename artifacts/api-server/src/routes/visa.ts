@@ -5,6 +5,12 @@ import { dirname, join } from "path";
 import { eq } from "drizzle-orm";
 import { db, visaCountryOverridesTable } from "@workspace/db";
 import OpenAI from "openai";
+import {
+  getSettings, putSetting, SETTINGS_KEYS, DEFAULT_SETTINGS,
+  type OptionCardDef, type SiteSettings,
+  getAdminAuth, setAdminCredentials, verifyAdminLogin, verifyAdminPassword,
+  createSessionToken, verifySessionToken, parseCookies,
+} from "../lib/siteSettings";
 
 // Prefer the Replit AI Integrations proxy (no user API key / credits needed);
 // fall back to a direct OpenAI key if the proxy env vars are missing.
@@ -50,6 +56,33 @@ interface StickerFile      { defaults: Record<string, unknown>; countries: RawCo
 interface Override     {
   visa_summary?: string; stay_rule?: string; insurance_required?: boolean;
   admin_html_notes?: string; ai_extra_context?: string; is_active?: boolean;
+  /** Flexible admin-editable fields (names, slug, category, precondition,
+   *  age_bands, airline_conditions, mission_note, option_cards, pricing…). */
+  extra?: Record<string, unknown>;
+}
+
+const VALID_CATEGORIES = ["visa_exempt", "evisa_direct", "evisa_conditional", "age_special", "sticker_mission"] as const;
+
+/** Fields the admin may store in the `extra` JSON blob. */
+const EXTRA_FIELDS = [
+  "name", "name_tr", "iso2", "flag_emoji", "slug", "category",
+  "precondition", "age_bands", "airline_conditions", "mission_note",
+  "headline", "features", "price_label", "price_example", "cta", "cta_href",
+  "option_cards", "pricing_override",
+] as const;
+
+/** Apply the extra JSON override fields onto a merged country object. */
+function applyExtra<T extends Record<string, unknown>>(base: T, o: Override): T {
+  const extra = o.extra;
+  if (!extra || typeof extra !== "object") return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const f of EXTRA_FIELDS) {
+    if (extra[f] === undefined || extra[f] === null) continue;
+    if (f === "category" && !VALID_CATEGORIES.includes(extra[f] as typeof VALID_CATEGORIES[number])) continue;
+    if (f === "cta_href" && !String(extra[f]).startsWith("/")) continue; // internal links only
+    out[f] = f === "mission_note" || f === "precondition" ? String(extra[f]) : extra[f];
+  }
+  return out as T;
 }
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
@@ -111,6 +144,7 @@ async function loadDbOverrides(): Promise<Record<string, Override>> {
         admin_html_notes:   row.adminHtmlNotes      ?? undefined,
         ai_extra_context:   row.aiExtraContext       ?? undefined,
         is_active:          row.isActive            ?? undefined,
+        extra:              (row.extra as Record<string, unknown> | null) ?? undefined,
       };
     }
     return map;
@@ -132,6 +166,7 @@ async function upsertDbOverride(countryId: string, override: Override): Promise<
       adminHtmlNotes:    override.admin_html_notes   ?? null,
       aiExtraContext:    override.ai_extra_context    ?? null,
       isActive:          override.is_active          ?? null,
+      extra:             override.extra              ?? null,
       updatedAt:         new Date(),
     })
     .onConflictDoUpdate({
@@ -143,6 +178,7 @@ async function upsertDbOverride(countryId: string, override: Override): Promise<
         adminHtmlNotes:    override.admin_html_notes   ?? null,
         aiExtraContext:    override.ai_extra_context    ?? null,
         isActive:          override.is_active          ?? null,
+        extra:             override.extra              ?? null,
         updatedAt:         new Date(),
       },
     });
@@ -189,7 +225,7 @@ async function loadAll() {
 
   const exempt = (exemptFile.countries || []).map((c) => {
     const o = overrides[c.id] || {};
-    return {
+    return applyExtra({
       ...exemptDefs, ...c, ...o,
       category: "visa_exempt" as const,
       insurance_required: o.insurance_required ?? c.insurance_required ?? true,
@@ -198,13 +234,13 @@ async function loadAll() {
       is_active: o.is_active ?? c.is_active ?? true,
       cta: (c as RawCountry).cta ?? (exemptDefs as unknown as RawCountry).cta ?? "Get travel insurance",
       cta_href: "/checkout",
-    };
+    }, o);
   });
 
   const evisaRaw = Array.isArray(evisaFile) ? evisaFile : evisaFile.countries || [];
   const evisa = (evisaRaw as RawCountry[]).map((c) => {
     const o = overrides[c.id] || {};
-    return {
+    return applyExtra({
       ...EVISA_DEFAULTS, ...c, ...o,
       category: "evisa_direct" as const,
       insurance_required: o.insurance_required ?? c.insurance_required ?? true,
@@ -213,14 +249,14 @@ async function loadAll() {
       is_active: o.is_active ?? c.is_active ?? true,
       cta: "APPLY NOW",
       cta_href: "/next",
-    };
+    }, o);
   });
 
   const condFile  = readJson<ConditionalFile>(CONDITIONAL_PATH, { defaults: {}, countries: [] });
   const condDefs  = condFile.defaults || {};
   const conditional = (condFile.countries || []).map((c) => {
     const o = overrides[c.id] || {};
-    return {
+    return applyExtra({
       ...CONDITIONAL_DEFAULTS, ...condDefs, ...c, ...o,
       category: "evisa_conditional" as const,
       insurance_required: true,
@@ -232,7 +268,7 @@ async function loadAll() {
       precondition: o.visa_summary
         ? undefined
         : (c as { precondition?: string }).precondition ?? (condDefs as { precondition?: string }).precondition,
-    };
+    }, o);
   });
 
   // age_special
@@ -240,7 +276,7 @@ async function loadAll() {
   const ageDefs = ageFile.defaults || {};
   const ageSpecial = (ageFile.countries || []).map((c) => {
     const o = overrides[c.id] || {};
-    return {
+    return applyExtra({
       ...ageDefs, ...c, ...o,
       category: "age_special" as const,
       insurance_required: true,
@@ -250,7 +286,7 @@ async function loadAll() {
       cta: "APPLY NOW",
       cta_href: `/apply/${c.slug || c.id}`,
       age_bands: c.age_bands || [],
-    };
+    }, o);
   });
 
   // sticker_mission
@@ -258,7 +294,7 @@ async function loadAll() {
   const stickerDefs = stickerFile.defaults || {};
   const sticker = (stickerFile.countries || []).map((c) => {
     const o = overrides[c.id] || {};
-    return {
+    return applyExtra({
       ...stickerDefs, ...c, ...o,
       category: "sticker_mission" as const,
       insurance_required: true,
@@ -267,10 +303,34 @@ async function loadAll() {
       is_active: o.is_active ?? c.is_active ?? true,
       cta: "APPLY NOW",
       cta_href: `/apply/${c.slug || c.id}`,
-    };
+    }, o);
   });
 
-  return [...exempt, ...evisa, ...conditional, ...ageSpecial, ...sticker];
+  const all = [...exempt, ...evisa, ...conditional, ...ageSpecial, ...sticker];
+
+  // Admin-created countries (exist only as DB overrides with extra.category)
+  const seedIds = new Set(all.map((c) => c.id));
+  for (const [id, o] of Object.entries(overrides)) {
+    const extra = o.extra as Record<string, unknown> | undefined;
+    if (seedIds.has(id) || !extra || !extra.category || !extra.name) continue;
+    all.push(applyExtra({
+      id,
+      name: String(extra.name),
+      iso2: String(extra.iso2 || id).toUpperCase(),
+      flag_emoji: String(extra.flag_emoji || "🏳️"),
+      category: "evisa_direct",
+      visa_summary: o.visa_summary ?? "",
+      stay_rule: o.stay_rule ?? "",
+      insurance_required: o.insurance_required ?? true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? "",
+      is_active: o.is_active ?? true,
+      cta: "APPLY NOW",
+      cta_href: "/next",
+    } as unknown as Record<string, unknown>, o) as unknown as (typeof all)[number]);
+  }
+
+  return all;
 }
 
 async function getCountry(idOrIso: string) {
@@ -336,9 +396,49 @@ function depermitDeep<T>(v: T, key?: string): T {
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const token = (req.headers["x-admin-password"] as string) || (req.query.password as string);
-  if (token !== ADMIN_PASSWORD) { res.status(401).json({ error: "Unauthorized" }); return; }
-  next();
+  // 1) Session cookie set by /travel/admin/login
+  const cookies = parseCookies(req.headers.cookie);
+  if (verifySessionToken(cookies["tta_admin"])) { next(); return; }
+  // 2) Legacy password header (verified against stored credentials)
+  const legacy = (req.headers["x-admin-password"] as string) || "";
+  if (legacy) {
+    verifyAdminPassword(legacy)
+      .then((ok) => (ok ? next() : res.status(401).json({ error: "Unauthorized" })))
+      .catch(() => res.status(401).json({ error: "Unauthorized" }));
+    return;
+  }
+  res.status(401).json({ error: "Unauthorized" });
+}
+
+// ── Pricing / option-card resolution ─────────────────────────────────────────
+
+type AnyCountry = Record<string, unknown>;
+
+function effectivePricing(settings: SiteSettings, country: AnyCountry) {
+  const base = settings.pricing;
+  const over = ((country.pricing_override as Record<string, unknown>) || {}) as {
+    insurance?: Partial<SiteSettings["pricing"]["insurance"]>;
+    fees?: Partial<SiteSettings["pricing"]["fees"]>;
+  };
+  return {
+    insurance: { ...base.insurance, ...(over.insurance || {}) },
+    fees: { ...base.fees, ...(over.fees || {}) },
+  };
+}
+
+function effectiveOptionCards(settings: SiteSettings, country: AnyCountry): OptionCardDef[] {
+  const own = country.option_cards as OptionCardDef[] | undefined;
+  const category = String(country.category) as keyof SiteSettings["option_card_defaults"];
+  const cards = (own && own.length > 0 ? own : settings.option_card_defaults[category]) || [];
+  const currency = effectivePricing(settings, country).fees.currency;
+  return [...cards]
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map((c) => ({ ...c, currency: c.currency || currency }));
+}
+
+/** Public-safe settings subset (never expose admin credentials). */
+function publicSettings(s: SiteSettings) {
+  return { pricing: s.pricing, chat: s.chat, apply: s.apply, brand: s.brand };
 }
 
 // ── Public routes ─────────────────────────────────────────────────────────────
@@ -365,9 +465,27 @@ router.get("/travel/countries/:id", async (req, res) => {
   try {
     const country = await getCountry(req.params.id);
     if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-    res.json(depermitDeep({ country, card: buildCard(country) }));
+    const settings = await getSettings();
+    const c = country as unknown as AnyCountry;
+    res.json(depermitDeep({
+      country,
+      card: buildCard(country),
+      option_cards: effectiveOptionCards(settings, c).filter((oc) => oc.active !== false),
+      pricing: effectivePricing(settings, c),
+    }));
   } catch (err) {
     console.error("[visa] GET /visa/countries/:id error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Public site settings (brand, chat copy, pricing, apply page)
+router.get("/travel/settings", async (_req, res) => {
+  try {
+    const s = await getSettings();
+    res.json(depermitDeep(publicSettings(s)));
+  } catch (err) {
+    console.error("[visa] GET /travel/settings error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -526,13 +644,100 @@ router.post("/travel/chat", async (req, res) => {
   }
 });
 
-// ── Admin routes ──────────────────────────────────────────────────────────────
+// ── Admin auth routes ─────────────────────────────────────────────────────────
+
+const ADMIN_COOKIE = "tta_admin";
+
+router.post("/travel/admin/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!(await verifyAdminLogin(String(username || ""), String(password || "")))) {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+    const token = createSessionToken();
+    res.setHeader("Set-Cookie",
+      `${ADMIN_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[visa] POST /travel/admin/login error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/travel/admin/logout", (_req, res) => {
+  res.setHeader("Set-Cookie", `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.json({ ok: true });
+});
+
+router.get("/travel/admin/session", requireAdmin, async (_req, res) => {
+  const auth = await getAdminAuth();
+  res.json({ ok: true, username: auth.username });
+});
+
+router.post("/travel/admin/change-password", requireAdmin, async (req, res) => {
+  try {
+    const { username, new_password } = req.body || {};
+    if (!new_password || String(new_password).length < 6) {
+      res.status(400).json({ error: "Password must be at least 6 characters" });
+      return;
+    }
+    const auth = await getAdminAuth();
+    await setAdminCredentials(String(username || auth.username), String(new_password));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[visa] change-password error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Admin settings + dashboard ───────────────────────────────────────────────
+
+router.get("/travel/admin/settings", requireAdmin, async (_req, res) => {
+  try {
+    res.json({ settings: await getSettings(), defaults: DEFAULT_SETTINGS });
+  } catch (err) {
+    console.error("[visa] GET admin/settings error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/travel/admin/settings", requireAdmin, async (req, res) => {
+  try {
+    const body = (req.body || {}) as Record<string, unknown>;
+    for (const key of SETTINGS_KEYS) {
+      if (body[key] !== undefined) await putSetting(key, body[key]);
+    }
+    res.json({ ok: true, settings: await getSettings() });
+  } catch (err) {
+    console.error("[visa] PUT admin/settings error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/travel/admin/summary", requireAdmin, async (_req, res) => {
+  try {
+    const all = await loadAll();
+    const byCategory: Record<string, number> = {};
+    for (const c of all) byCategory[c.category] = (byCategory[c.category] || 0) + 1;
+    res.json({
+      total: all.length,
+      active: all.filter((c) => (c as { is_active?: boolean }).is_active !== false).length,
+      by_category: byCategory,
+    });
+  } catch (err) {
+    console.error("[visa] GET admin/summary error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Admin country routes ──────────────────────────────────────────────────────
 
 router.get("/travel/admin/countries", requireAdmin, async (req, res) => {
   try {
     const { category } = req.query;
     let countries = (await loadAll()).sort((a, b) => a.name.localeCompare(b.name));
-    if (category === "visa_exempt" || category === "evisa_direct") {
+    if (typeof category === "string" && (VALID_CATEGORIES as readonly string[]).includes(category)) {
       countries = countries.filter((c) => c.category === category);
     }
     res.json({ countries });
@@ -572,10 +777,19 @@ router.put("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
           admin_html_notes:   existing[0].adminHtmlNotes      ?? undefined,
           ai_extra_context:   existing[0].aiExtraContext       ?? undefined,
           is_active:          existing[0].isActive            ?? undefined,
+          extra:              (existing[0].extra as Record<string, unknown> | null) ?? undefined,
         }
       : {};
 
     const body = req.body || {};
+
+    // Collect extended fields into the extra JSON blob
+    const prevExtra = prev.extra || {};
+    const nextExtra: Record<string, unknown> = { ...prevExtra };
+    for (const f of EXTRA_FIELDS) {
+      if (body[f] !== undefined) nextExtra[f] = body[f];
+    }
+
     const updated: Override = {
       visa_summary:       body.visa_summary      ?? prev.visa_summary,
       stay_rule:          body.stay_rule          ?? prev.stay_rule,
@@ -583,14 +797,60 @@ router.put("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
       admin_html_notes:   body.admin_html_notes   ?? prev.admin_html_notes ?? "",
       ai_extra_context:   body.ai_extra_context   ?? prev.ai_extra_context ?? "",
       is_active:          body.is_active          ?? prev.is_active,
+      extra:              Object.keys(nextExtra).length > 0 ? nextExtra : undefined,
     };
 
     await upsertDbOverride(country.id, updated);
 
     const updatedCountry = await getCountry(country.id);
-    res.json({ ok: true, country: updatedCountry, card: buildCard(updatedCountry) });
+    const settings = await getSettings();
+    res.json({
+      ok: true,
+      country: updatedCountry,
+      card: buildCard(updatedCountry),
+      option_cards: effectiveOptionCards(settings, updatedCountry as unknown as AnyCountry),
+      pricing: effectivePricing(settings, updatedCountry as unknown as AnyCountry),
+    });
   } catch (err) {
     console.error("[visa] PUT /visa/admin/countries/:id error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Create a brand-new country (stored entirely as a DB override)
+router.post("/travel/admin/countries", requireAdmin, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = String(body.name || "").trim();
+    if (!name) { res.status(400).json({ error: "name is required" }); return; }
+    const id = String(body.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
+    if (await getCountry(id)) { res.status(409).json({ error: "Country already exists" }); return; }
+
+    const extra: Record<string, unknown> = { name };
+    for (const f of EXTRA_FIELDS) if (body[f] !== undefined) extra[f] = body[f];
+    if (!extra.category) extra.category = "evisa_direct";
+
+    await upsertDbOverride(id, {
+      visa_summary: body.visa_summary, stay_rule: body.stay_rule,
+      insurance_required: body.insurance_required, admin_html_notes: body.admin_html_notes,
+      ai_extra_context: body.ai_extra_context, is_active: body.is_active ?? true,
+      extra,
+    });
+    res.json({ ok: true, country: await getCountry(id) });
+  } catch (err) {
+    console.error("[visa] POST admin/countries error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Delete a country override (restores seed defaults, or removes admin-created country)
+router.delete("/travel/admin/countries/:id/override", requireAdmin, async (req, res) => {
+  try {
+    await db.delete(visaCountryOverridesTable)
+      .where(eq(visaCountryOverridesTable.countryId, String(req.params.id)));
+    res.json({ ok: true, country: (await getCountry(String(req.params.id))) ?? null });
+  } catch (err) {
+    console.error("[visa] DELETE admin override error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1,4 +1,6 @@
 import AskAIDrawer from '../components/AskAIDrawer';
+import OptionCards from '../components/OptionCards';
+import type { OptionCard } from '@/lib/settings';
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
 
@@ -8,30 +10,12 @@ interface CountryData {
   admin_html_notes?: string;
 }
 
-function InsuranceBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-      style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-      🛡️ Insurance required
-    </span>
-  );
-}
-
-function ApplyBtn({ href, label = 'APPLY NOW' }: { href: string; label?: string }) {
-  return (
-    <a href={href}
-      className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-4 transition-opacity hover:opacity-90"
-      style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e40af)' }}>
-      {label}
-    </a>
-  );
-}
-
 export default function StickerLanding() {
   const params = useParams<{ countrySlug: string }>();
   const slug = params.countrySlug;
 
   const [country, setCountry] = useState<CountryData | null>(null);
+  const [optionCards, setOptionCards] = useState<OptionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -40,7 +24,7 @@ export default function StickerLanding() {
     setLoading(true); setNotFound(false);
     fetch(`/api/travel/countries/${slug}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(d => { setCountry(d.country); setLoading(false); })
+      .then(d => { setCountry(d.country); setOptionCards(d.option_cards ?? []); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });
   }, [slug]);
 
@@ -59,7 +43,6 @@ export default function StickerLanding() {
     </div>
   );
 
-  const applyHref = `/apply/${country.slug || country.id}`;
   const missionNote = country.mission_note || country.stay_rule || 'Embassy/consulate sticker permit required.';
 
   return (
@@ -134,66 +117,8 @@ export default function StickerLanding() {
           </div>
         </div>
 
-        {/* ── Primary Service Card ── */}
-        <div className="rounded-2xl overflow-hidden mb-4"
-          style={{ border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,.06)' }}>
-          {/* Card header */}
-          <div className="px-4 py-3" style={{ background: '#4c1d95' }}>
-            <div className="flex items-center justify-between">
-              <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">Recommended</span>
-              <span className="text-white font-bold text-[15px]">$20 USD</span>
-            </div>
-            <div className="text-white font-bold text-[17px] mt-0.5">Sticker Permit Consultancy Service</div>
-          </div>
-          {/* Card body */}
-          <div className="bg-white px-4 pt-4 pb-4">
-            <p className="text-[13px] text-gray-600 mb-3">
-              Our team handles the full embassy application process for you —
-              from document preparation to submission tracking.
-            </p>
-            <ul className="flex flex-col gap-2 mb-3">
-              {[
-                { icon: '📄', text: 'Full document preparation & checklist' },
-                { icon: '🏛️', text: 'Consular appointment booking assistance' },
-                { icon: '📝', text: 'Form completion & biometric support' },
-                { icon: '📡', text: '24/7 application status tracking' },
-              ].map(b => (
-                <li key={b.text} className="flex items-center gap-2 text-[13px] text-gray-700">
-                  <span className="text-[16px] shrink-0">{b.icon}</span>
-                  <span>{b.text}</span>
-                </li>
-              ))}
-            </ul>
-            <InsuranceBadge />
-            <ApplyBtn href={applyHref} />
-          </div>
-        </div>
-
-        {/* ── GCC Resident bonus card ── */}
-        <div className="rounded-2xl overflow-hidden mb-4"
-          style={{ border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,.06)' }}>
-          <div className="px-4 py-3" style={{ background: '#7c2d12' }}>
-            <div className="flex items-center justify-between">
-              <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">GCC Residents</span>
-              <span className="text-white font-bold text-[15px]">$20 USD</span>
-            </div>
-            <div className="text-white font-bold text-[16px] mt-0.5">Holiday Entry — GCC Residence</div>
-          </div>
-          <div className="bg-white px-4 pt-3 pb-4">
-            <p className="text-[13px] text-gray-600 mb-2">
-              If you hold a valid residence permit in the UAE, Saudi Arabia, Qatar, Kuwait, Oman, or Bahrain,
-              you may qualify for a simplified 30-day holiday entry stream.
-            </p>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {['UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain'].map(t => (
-                <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                  style={{ background: '#fff7ed', color: '#92400e' }}>{t}</span>
-              ))}
-            </div>
-            <InsuranceBadge />
-            <ApplyBtn href={applyHref} />
-          </div>
-        </div>
+        {/* ── Admin-editable service option cards ── */}
+        <OptionCards cards={optionCards} />
 
         {/* Admin notes */}
         {country.admin_html_notes && (

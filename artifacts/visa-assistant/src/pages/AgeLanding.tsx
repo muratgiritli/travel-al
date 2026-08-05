@@ -1,4 +1,6 @@
 import AskAIDrawer from '../components/AskAIDrawer';
+import OptionCards from '../components/OptionCards';
+import type { OptionCard } from '@/lib/settings';
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
 
@@ -30,39 +32,12 @@ function ApplyBtn({ href }: { href: string }) {
   );
 }
 
-const SCHENGEN_TAGS = [
-  'Austria','Belgium','Bulgaria','Croatia','Cyprus','Czechia','Denmark','Estonia',
-  'Finland','France','Germany','Greece','Hungary','Iceland','Ireland','Italy',
-  'Latvia','Liechtenstein','Lithuania','Luxembourg','Malta','Netherlands','Norway',
-  'Poland','Portugal','Romania','Slovakia','Slovenia','Spain','Sweden','Switzerland',
-];
-const OPTION1_TAGS = [...SCHENGEN_TAGS, 'United Kingdom','United States','Canada','Australia','Japan','South Korea'];
-const OPTION2_TAGS = ['Schengen Area','United States','United Kingdom','Ireland'];
-const GCC_TAGS = ['UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain'];
 const AIRLINE_TAGS = ['Turkish Airlines','AJet','Pegasus','EgyptAir','Air Cairo'];
 
 function TagPill({ tag, color = '#f0f4ff', text = '#1e3a8a' }: { tag: string; color?: string; text?: string }) {
   return (
     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium"
       style={{ background: color, color: text }}>{tag}</span>
-  );
-}
-
-function TagGrid({ tags, max = 30, color, text }: { tags: string[]; max?: number; color?: string; text?: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? tags : tags.slice(0, max);
-  return (
-    <div>
-      <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
-        {shown.map(t => <TagPill key={t} tag={t} color={color} text={text} />)}
-      </div>
-      {tags.length > max && (
-        <button className="text-[12px] text-blue-600 underline mt-1"
-          onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Show less' : `+ ${tags.length - max} more`}
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -119,33 +94,6 @@ function AgeBandCard({ band, applyHref, countryName, isEgypt }: {
   );
 }
 
-// ─── Option Card ──────────────────────────────────────────────────────────────
-
-function OptionCard({ number, color, title, condition, price, children, applyHref }: {
-  number: number; color: string; title: string; condition: string;
-  price: string; children: React.ReactNode; applyHref: string;
-}) {
-  return (
-    <div className="rounded-2xl overflow-hidden mb-4"
-      style={{ border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,.06)' }}>
-      <div className="px-4 py-3" style={{ background: color }}>
-        <div className="flex items-center justify-between">
-          <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">Option {number}</span>
-          <span className="text-white font-bold text-[15px]">{price}</span>
-        </div>
-        <div className="text-white font-bold text-[16px] mt-0.5">{title}</div>
-      </div>
-      <div className="bg-white px-4 pt-3 pb-4">
-        <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Condition</p>
-        <p className="text-[13px] text-gray-700 mb-2">{condition}</p>
-        {children}
-        <div className="mt-3 mb-1"><InsuranceBadge /></div>
-        <ApplyBtn href={applyHref} />
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AgeLanding() {
@@ -153,6 +101,7 @@ export default function AgeLanding() {
   const slug = params.countrySlug;
 
   const [country, setCountry] = useState<CountryData | null>(null);
+  const [optionCards, setOptionCards] = useState<OptionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -161,7 +110,7 @@ export default function AgeLanding() {
     setLoading(true); setNotFound(false);
     fetch(`/api/travel/countries/${slug}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(d => { setCountry(d.country); setLoading(false); })
+      .then(d => { setCountry(d.country); setOptionCards(d.option_cards ?? []); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });
   }, [slug]);
 
@@ -261,51 +210,13 @@ export default function AgeLanding() {
           </>
         )}
 
-        {/* ── Standard Options (conditional / support) ── */}
-        <div className="mt-2">
-          <h3 className="font-bold text-[15px] text-gray-900 mb-3">Additional Pathways</h3>
-
-          <OptionCard number={1} color="#1e3a8a"
-            title="Get a Turkey e-Permit"
-            condition="If you have a valid residence permit in any of the following countries:"
-            price="$60 USD" applyHref={applyHref}>
-            <TagGrid tags={OPTION1_TAGS} max={24} />
-            <p className="text-[12px] text-gray-400 mt-2">
-              e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
-            </p>
-          </OptionCard>
-
-          <OptionCard number={2} color="#065f46"
-            title="Get a Turkey e-Permit"
-            condition="If you hold a valid entry permit for any of the following countries:"
-            price="$60 USD" applyHref={applyHref}>
-            <TagGrid tags={OPTION2_TAGS} max={6} />
-            <p className="text-[12px] text-gray-400 mt-2">
-              Valid physical entry permit from the Schengen Area, USA, UK or Ireland required.
-            </p>
-          </OptionCard>
-
-          <OptionCard number={3} color="#7c2d12"
-            title="Get a Turkey Entry Permit"
-            condition="If you have a valid residence permit in GCC countries:"
-            price="$20 USD" applyHref={applyHref}>
-            <TagGrid tags={GCC_TAGS} max={8} />
-          </OptionCard>
-
-          <OptionCard number={4} color="#4c1d95"
-            title="Sticker Permit Consultancy"
-            condition="Embassy sticker permit consultancy service"
-            price="$20 USD" applyHref={applyHref}>
-            <ul className="flex flex-col gap-1.5 text-[13px] text-gray-600">
-              {['Document preparation guidance','Embassy appointment coordination',
-                'Form & biometric support','Application status tracking'].map(b => (
-                <li key={b} className="flex items-start gap-2">
-                  <span className="text-purple-600 mt-0.5">✓</span><span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </OptionCard>
-        </div>
+        {/* ── Standard Options (admin-editable) ── */}
+        {optionCards.length > 0 && (
+          <div className="mt-2">
+            <h3 className="font-bold text-[15px] text-gray-900 mb-3">Additional Pathways</h3>
+            <OptionCards cards={optionCards} />
+          </div>
+        )}
       </div>
 
       {/* ── Bottom Tab Bar ── */}

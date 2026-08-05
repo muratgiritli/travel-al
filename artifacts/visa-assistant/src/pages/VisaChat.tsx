@@ -8,6 +8,7 @@ import {
   removeSessionFromHistory,
   SessionEntry,
 } from '@/lib/sessionHistory';
+import { useSettings } from '@/lib/settings';
 
 type CountryCategory = 'visa_exempt' | 'evisa_direct' | 'evisa_conditional' | 'age_special' | 'sticker_mission';
 
@@ -255,10 +256,11 @@ function generateSessionId(): string {
   return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 export default function VisaChat() {
+  const { settings } = useSettings();
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'bot', text: 'Which country issued your passport?' },
+    { role: 'bot', text: settings.chat.welcome_message },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [unlocked, setUnlocked] = useState(false);
@@ -278,6 +280,17 @@ export default function VisaChat() {
       .then(d => setCountries(d.countries ?? []))
       .catch(console.error);
   }, []);
+
+  // Sync the opening bot message with admin-configured welcome text once
+  // settings load — only while the thread is still the fresh single greeting.
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].role === 'bot' && !prev[0].card) {
+        return [{ role: 'bot', text: settings.chat.welcome_message }];
+      }
+      return prev;
+    });
+  }, [settings.chat.welcome_message]);
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -303,13 +316,13 @@ export default function VisaChat() {
   const startNewChat = useCallback(() => {
     sessionIdRef.current = generateSessionId();
     sessionLabelRef.current = 'New conversation';
-    setMessages([{ role: 'bot', text: 'Which country issued your passport?' }]);
+    setMessages([{ role: 'bot', text: settings.chat.welcome_message }]);
     setSelectedId('');
     selectingRef.current = false;
     setUnlocked(false);
     setInputValue('');
     setShowHistory(false);
-  }, []);
+  }, [settings.chat.welcome_message]);
 
   // ── Select a past session (load its label as active, close panel) ──
   const handleSelectSession = useCallback((id: string) => {
@@ -407,7 +420,7 @@ export default function VisaChat() {
 
     const userMsg = `I have a ${country.name} passport. What do I need to enter Turkey?`;
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
-    addMsg({ role: 'system', text: 'Passport selected.' });
+    addMsg({ role: 'system', text: settings.chat.passport_selected_message });
     addMsg({ role: 'user', text: 'What do I need to enter Turkey?' });
     setUnlocked(true);
     setLoading(true);
@@ -539,10 +552,10 @@ export default function VisaChat() {
               background: 'radial-gradient(circle at 30% 30%, #e8c984, #c5a059)',
             }}
           >
-            🕌
+            {settings.brand.logo_emoji}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-[15px] text-gray-900">Turkey Travel Assistant</div>
+            <div className="font-semibold text-[15px] text-gray-900">{settings.brand.site_name}</div>
             <div className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: '#16a34a' }}>
               <div className="w-2 h-2 rounded-full" style={{ background: '#16a34a' }} />
               Online
@@ -684,7 +697,7 @@ export default function VisaChat() {
             </div>
 
           <div className="text-center text-[11px] text-gray-400">
-            AI guidance • Human travel experts available.
+            {settings.chat.bottom_disclaimer}
           </div>
         </div>
       </div>

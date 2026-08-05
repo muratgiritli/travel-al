@@ -1,4 +1,6 @@
 import AskAIDrawer from '../components/AskAIDrawer';
+import OptionCards from '../components/OptionCards';
+import type { OptionCard } from '@/lib/settings';
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
 
@@ -13,89 +15,6 @@ interface CardData {
   admin_html_notes: string;
 }
 
-// ─── Static option data ───────────────────────────────────────────────────────
-
-const SCHENGEN_TAGS = [
-  'Austria','Belgium','Bulgaria','Croatia','Cyprus','Czechia','Denmark','Estonia',
-  'Finland','France','Germany','Greece','Hungary','Iceland','Ireland','Italy',
-  'Latvia','Liechtenstein','Lithuania','Luxembourg','Malta','Netherlands','Norway',
-  'Poland','Portugal','Romania','Slovakia','Slovenia','Spain','Sweden','Switzerland',
-];
-const OPTION1_TAGS = [
-  ...SCHENGEN_TAGS, 'United Kingdom','United States','Canada','Australia','Japan','South Korea',
-];
-const OPTION2_TAGS = ['Schengen Area','United States','United Kingdom','Ireland'];
-const GCC_TAGS    = ['UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain'];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function TagGrid({ tags, max = 30 }: { tags: string[]; max?: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? tags : tags.slice(0, max);
-  return (
-    <div>
-      <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
-        {shown.map(t => (
-          <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: '#f0f4ff', color: '#1e3a8a' }}>{t}</span>
-        ))}
-      </div>
-      {tags.length > max && (
-        <button className="text-[12px] text-blue-600 underline mt-1" onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Show less' : `+ ${tags.length - max} more`}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function InsuranceBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-      🛡️ Insurance required
-    </span>
-  );
-}
-
-function ApplyBtn({ href, label = 'APPLY NOW' }: { href: string; label?: string }) {
-  return (
-    <a
-      href={href}
-      className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-3 transition-opacity hover:opacity-90"
-      style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e40af)' }}
-    >
-      {label}
-    </a>
-  );
-}
-
-function OptionCard({
-  number, color, title, condition, price, children, applyHref,
-}: {
-  number: number; color: string; title: string; condition: string;
-  price: string; children: React.ReactNode; applyHref: string;
-}) {
-  return (
-    <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,.06)' }}>
-      {/* Colored header */}
-      <div className="px-4 py-3" style={{ background: color }}>
-        <div className="flex items-center justify-between">
-          <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">Option {number}</span>
-          <span className="text-white font-bold text-[15px]">{price}</span>
-        </div>
-        <div className="text-white font-bold text-[16px] mt-0.5">{title}</div>
-      </div>
-      {/* Body */}
-      <div className="bg-white px-4 pt-3 pb-4">
-        <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Condition</p>
-        <p className="text-[13px] text-gray-700 mb-2">{condition}</p>
-        {children}
-        <div className="mt-3 mb-1"><InsuranceBadge /></div>
-        <ApplyBtn href={applyHref} />
-      </div>
-    </div>
-  );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CountryLanding() {
@@ -104,6 +23,7 @@ export default function CountryLanding() {
 
   const [country, setCountry] = useState<CountryData | null>(null);
   const [card, setCard] = useState<CardData | null>(null);
+  const [optionCards, setOptionCards] = useState<OptionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -119,6 +39,7 @@ export default function CountryLanding() {
       .then(d => {
         setCountry(d.country);
         setCard(d.card);
+        setOptionCards(d.option_cards ?? []);
         setLoading(false);
       })
       .catch(() => {
@@ -148,7 +69,6 @@ export default function CountryLanding() {
     );
   }
 
-  const applyHref = `/apply/${country.id}`;
   // Parse stay length from card body or country data
   const stayLine = card?.body?.[0] || country.stay_rule || '';
   const stayMatch = stayLine.match(/(\d+)[- ]day/i);
@@ -229,80 +149,8 @@ export default function CountryLanding() {
           </div>
         </div>
 
-        {/* ── Option 1 ── */}
-        <OptionCard
-          number={1}
-          color="#1e3a8a"
-          title="Get a Turkey e-Permit"
-          condition="If you have a valid residence permit in any of the following countries:"
-          price="$60 USD"
-          applyHref={applyHref}
-        >
-          <p className="text-[13px] text-gray-600 mb-2">
-            Hold a valid residence permit from a Schengen/EU country, UK, USA, Canada, Australia, Japan, or South Korea to qualify.
-          </p>
-          <TagGrid tags={OPTION1_TAGS} max={24} />
-          <p className="text-[12px] text-gray-400 mt-2">
-            e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
-          </p>
-        </OptionCard>
-
-        {/* ── Option 2 ── */}
-        <OptionCard
-          number={2}
-          color="#065f46"
-          title="Get a Turkey e-Permit"
-          condition="If you hold a valid entry permit for any of the following countries:"
-          price="$60 USD"
-          applyHref={applyHref}
-        >
-          <p className="text-[13px] text-gray-600 mb-2">
-            Hold a valid physical entry permit from the Schengen Area, USA, UK, or Ireland — you may be eligible for an online e-Permit.
-          </p>
-          <TagGrid tags={OPTION2_TAGS} max={6} />
-          <p className="text-[12px] text-gray-400 mt-2">
-            e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
-          </p>
-        </OptionCard>
-
-        {/* ── Option 3 ── */}
-        <OptionCard
-          number={3}
-          color="#7c2d12"
-          title="Get a Turkey Entry Permit"
-          condition="If you have a valid residence permit in GCC countries:"
-          price="$20 USD"
-          applyHref={applyHref}
-        >
-          <p className="text-[13px] text-gray-600 mb-2">
-            Residents of GCC countries may be eligible for a 30-day holiday entry stream to Türkiye.
-          </p>
-          <TagGrid tags={GCC_TAGS} max={8} />
-        </OptionCard>
-
-        {/* ── Option 4 ── */}
-        <OptionCard
-          number={4}
-          color="#4c1d95"
-          title="Sticker Permit Consultancy"
-          condition="Embassy sticker permit consultancy service"
-          price="$20 USD"
-          applyHref={applyHref}
-        >
-          <ul className="flex flex-col gap-1.5 text-[13px] text-gray-600 mb-1">
-            {[
-              'Document preparation guidance',
-              'Embassy appointment coordination',
-              'Form & biometric support',
-              'Application status tracking',
-            ].map(b => (
-              <li key={b} className="flex items-start gap-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-        </OptionCard>
+        {/* ── Admin-editable option cards ── */}
+        <OptionCards cards={optionCards} />
 
         {/* Admin notes */}
         {card?.admin_html_notes && (
