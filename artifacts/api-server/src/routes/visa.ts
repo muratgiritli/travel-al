@@ -1,7 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { eq } from "drizzle-orm";
+import { db, visaCountryOverridesTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -75,9 +77,6 @@ const EVISA_DEFAULTS: Partial<RawCountry> = {
 function readJson<T>(file: string, fallback: T): T {
   try { return JSON.parse(readFileSync(file, "utf8")); } catch { return fallback; }
 }
-function writeJson(file: string, data: unknown): void {
-  writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
-}
 function sanitize(html: string): string {
   return String(html || "")
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -86,10 +85,96 @@ function sanitize(html: string): string {
     .replace(/javascript:/gi, "");
 }
 
-function loadAll() {
+// ── DB override helpers ───────────────────────────────────────────────────────
+
+/** Load all overrides from the DB, keyed by country_id.
+ *  Falls back to the JSON file when the DB is unavailable. */
+async function loadDbOverrides(): Promise<Record<string, Override>> {
+  try {
+    const rows = await db.select().from(visaCountryOverridesTable);
+    const map: Record<string, Override> = {};
+    for (const row of rows) {
+      map[row.countryId] = {
+        visa_summary:       row.visaSummary        ?? undefined,
+        stay_rule:          row.stayRule            ?? undefined,
+        insurance_required: row.insuranceRequired   ?? undefined,
+        admin_html_notes:   row.adminHtmlNotes      ?? undefined,
+        ai_extra_context:   row.aiExtraContext       ?? undefined,
+        is_active:          row.isActive            ?? undefined,
+      };
+    }
+    return map;
+  } catch (err) {
+    console.error("[visa] Failed to load overrides from DB, falling back to JSON file:", err);
+    return readJson<Record<string, Override>>(OVERRIDES_PATH, {});
+  }
+}
+
+/** Upsert a single country override into the DB. */
+async function upsertDbOverride(countryId: string, override: Override): Promise<void> {
+  await db
+    .insert(visaCountryOverridesTable)
+    .values({
+      countryId,
+      visaSummary:       override.visa_summary       ?? null,
+      stayRule:          override.stay_rule          ?? null,
+      insuranceRequired: override.insurance_required ?? null,
+      adminHtmlNotes:    override.admin_html_notes   ?? null,
+      aiExtraContext:    override.ai_extra_context    ?? null,
+      isActive:          override.is_active          ?? null,
+      updatedAt:         new Date(),
+    })
+    .onConflictDoUpdate({
+      target: visaCountryOverridesTable.countryId,
+      set: {
+        visaSummary:       override.visa_summary       ?? null,
+        stayRule:          override.stay_rule          ?? null,
+        insuranceRequired: override.insurance_required ?? null,
+        adminHtmlNotes:    override.admin_html_notes   ?? null,
+        aiExtraContext:    override.ai_extra_context    ?? null,
+        isActive:          override.is_active          ?? null,
+        updatedAt:         new Date(),
+      },
+    });
+}
+
+/** On first start, migrate any overrides from the JSON file into the DB. */
+let migrationDone = false;
+async function migrateJsonOverridesToDb(): Promise<void> {
+  if (migrationDone) return;
+  migrationDone = true;
+  try {
+    const jsonOverrides = readJson<Record<string, Override>>(OVERRIDES_PATH, {});
+    const ids = Object.keys(jsonOverrides);
+    if (ids.length === 0) return;
+
+    // Only seed DB entries that don't exist yet
+    const existing = await db
+      .select({ countryId: visaCountryOverridesTable.countryId })
+      .from(visaCountryOverridesTable);
+    const existingIds = new Set(existing.map((r) => r.countryId));
+
+    for (const id of ids) {
+      if (!existingIds.has(id)) {
+        await upsertDbOverride(id, jsonOverrides[id]);
+      }
+    }
+    if (ids.length > 0) {
+      console.log(`[visa] Migrated ${ids.filter((id) => !existingIds.has(id)).length} override(s) from JSON to DB`);
+    }
+  } catch (err) {
+    console.error("[visa] Override migration failed (non-fatal):", err);
+  }
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+
+async function loadAll() {
+  await migrateJsonOverridesToDb();
+  const overrides = await loadDbOverrides();
+
   const exemptFile  = readJson<ExemptFile>(EXEMPT_PATH, { defaults: {}, countries: [] });
   const evisaFile   = readJson<EvisaFile>(EVISA_PATH,  { countries: [] });
-  const overrides   = readJson<Record<string, Override>>(OVERRIDES_PATH, {});
   const exemptDefs  = exemptFile.defaults || {};
 
   const exempt = (exemptFile.countries || []).map((c) => {
@@ -101,7 +186,7 @@ function loadAll() {
       admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
       ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
       is_active: o.is_active ?? c.is_active ?? true,
-      cta: (c as RawCountry).cta ?? (exemptDefs as RawCountry).cta ?? "Get travel insurance",
+      cta: (c as RawCountry).cta ?? (exemptDefs as unknown as RawCountry).cta ?? "Get travel insurance",
       cta_href: "/checkout",
     };
   });
@@ -178,9 +263,10 @@ function loadAll() {
   return [...exempt, ...evisa, ...conditional, ...ageSpecial, ...sticker];
 }
 
-function getCountry(idOrIso: string) {
+async function getCountry(idOrIso: string) {
   const key = String(idOrIso || "").toLowerCase();
-  return loadAll().find(
+  const all = await loadAll();
+  return all.find(
     (c) =>
       c.id === key ||
       c.iso2.toLowerCase() === key ||
@@ -189,7 +275,7 @@ function getCountry(idOrIso: string) {
   );
 }
 
-function buildCard(country: ReturnType<typeof getCountry>) {
+function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
   if (!country) return null;
   return {
     country: country.name,
@@ -222,90 +308,138 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 
-router.get("/visa/countries", (_req, res) => {
-  const countries = loadAll()
-    .filter((c) => (c as { is_active?: boolean }).is_active !== false)
-    .map((c) => ({
-      id: c.id, name: c.name, name_tr: (c as { name_tr?: string }).name_tr,
-      iso2: c.iso2, flag_emoji: c.flag_emoji,
-      category: c.category,
-      visa_summary: (c as { visa_summary?: string }).visa_summary,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  res.json({ count: countries.length, countries });
+router.get("/visa/countries", async (_req, res) => {
+  try {
+    const countries = (await loadAll())
+      .filter((c) => (c as { is_active?: boolean }).is_active !== false)
+      .map((c) => ({
+        id: c.id, name: c.name, name_tr: (c as { name_tr?: string }).name_tr,
+        iso2: c.iso2, flag_emoji: c.flag_emoji,
+        category: c.category,
+        visa_summary: (c as { visa_summary?: string }).visa_summary,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ count: countries.length, countries });
+  } catch (err) {
+    console.error("[visa] GET /visa/countries error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
-router.get("/visa/countries/:id", (req, res) => {
-  const country = getCountry(req.params.id);
-  if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-  res.json({ country, card: buildCard(country) });
+router.get("/visa/countries/:id", async (req, res) => {
+  try {
+    const country = await getCountry(req.params.id);
+    if (!country) { res.status(404).json({ error: "Country not found" }); return; }
+    res.json({ country, card: buildCard(country) });
+  } catch (err) {
+    console.error("[visa] GET /visa/countries/:id error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
-router.post("/visa/chat", (req, res) => {
-  const { countryId, message } = req.body || {};
-  const country = getCountry(countryId);
-  if (!country) {
-    res.status(400).json({ reply_text: "Please select your passport country first.", card: null });
-    return;
+router.post("/visa/chat", async (req, res) => {
+  try {
+    const { countryId, message } = req.body || {};
+    const country = await getCountry(countryId);
+    if (!country) {
+      res.status(400).json({ reply_text: "Please select your passport country first.", card: null });
+      return;
+    }
+    const card = buildCard(country);
+    const lower = String(message || "").toLowerCase();
+    const isEvisa = country.category === "evisa_direct";
+
+    let reply_text = isEvisa
+      ? `${country.name} passport holders can obtain a direct e-Visa for Türkiye. Travel insurance is also required for your stay.`
+      : `${country.name} is visa-exempt for Türkiye. Travel health insurance is mandatory for your stay.`;
+
+    if (lower.includes("insurance") || lower.includes("sigorta")) {
+      reply_text = `Yes — travel insurance is required for ${country.name} passport holders entering Türkiye, regardless of visa status.`;
+    } else if (lower.includes("how long") || lower.includes("days") || lower.includes("stay")) {
+      reply_text = `${country.name}: ${card?.visa_status}. ${card?.body[0]}`;
+    } else if (lower.includes("evisa") || lower.includes("e-visa") || lower.includes("apply")) {
+      reply_text = isEvisa
+        ? `You'll need to apply for an e-Visa before travel. Click APPLY NOW to start your application through our secure portal.`
+        : `${country.name} passport holders do not need a visa for Türkiye — you are visa-exempt.`;
+    } else {
+      const extra = (country as { ai_extra_context?: string }).ai_extra_context;
+      if (extra) reply_text += `\n\n${extra}`;
+    }
+
+    res.json({ reply_text, card });
+  } catch (err) {
+    console.error("[visa] POST /visa/chat error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
-  const card = buildCard(country);
-  const lower = String(message || "").toLowerCase();
-  const isEvisa = country.category === "evisa_direct";
-
-  let reply_text = isEvisa
-    ? `${country.name} passport holders can obtain a direct e-Visa for Türkiye. Travel insurance is also required for your stay.`
-    : `${country.name} is visa-exempt for Türkiye. Travel health insurance is mandatory for your stay.`;
-
-  if (lower.includes("insurance") || lower.includes("sigorta")) {
-    reply_text = `Yes — travel insurance is required for ${country.name} passport holders entering Türkiye, regardless of visa status.`;
-  } else if (lower.includes("how long") || lower.includes("days") || lower.includes("stay")) {
-    reply_text = `${country.name}: ${card?.visa_status}. ${card?.body[0]}`;
-  } else if (lower.includes("evisa") || lower.includes("e-visa") || lower.includes("apply")) {
-    reply_text = isEvisa
-      ? `You'll need to apply for an e-Visa before travel. Click APPLY NOW to start your application through our secure portal.`
-      : `${country.name} passport holders do not need a visa for Türkiye — you are visa-exempt.`;
-  } else {
-    const extra = (country as { ai_extra_context?: string }).ai_extra_context;
-    if (extra) reply_text += `\n\n${extra}`;
-  }
-
-  res.json({ reply_text, card });
 });
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
-router.get("/visa/admin/countries", requireAdmin, (req, res) => {
-  const { category } = req.query;
-  let countries = loadAll().sort((a, b) => a.name.localeCompare(b.name));
-  if (category === "visa_exempt" || category === "evisa_direct") {
-    countries = countries.filter((c) => c.category === category);
+router.get("/visa/admin/countries", requireAdmin, async (req, res) => {
+  try {
+    const { category } = req.query;
+    let countries = (await loadAll()).sort((a, b) => a.name.localeCompare(b.name));
+    if (category === "visa_exempt" || category === "evisa_direct") {
+      countries = countries.filter((c) => c.category === category);
+    }
+    res.json({ countries });
+  } catch (err) {
+    console.error("[visa] GET /visa/admin/countries error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
-  res.json({ countries });
 });
 
-router.get("/visa/admin/countries/:id", requireAdmin, (req, res) => {
-  const country = getCountry(req.params.id);
-  if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-  res.json({ country, card: buildCard(country) });
+router.get("/visa/admin/countries/:id", requireAdmin, async (req, res) => {
+  try {
+    const country = await getCountry(String(req.params.id));
+    if (!country) { res.status(404).json({ error: "Country not found" }); return; }
+    res.json({ country, card: buildCard(country) });
+  } catch (err) {
+    console.error("[visa] GET /visa/admin/countries/:id error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
-router.put("/visa/admin/countries/:id", requireAdmin, (req, res) => {
-  const country = getCountry(req.params.id);
-  if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-  const overrides = readJson<Record<string, Override>>(OVERRIDES_PATH, {});
-  const prev = overrides[country.id] || {};
-  const body = req.body || {};
-  overrides[country.id] = {
-    ...prev,
-    visa_summary:      body.visa_summary      ?? prev.visa_summary,
-    stay_rule:         body.stay_rule          ?? prev.stay_rule,
-    insurance_required: body.insurance_required ?? prev.insurance_required,
-    admin_html_notes:  body.admin_html_notes   ?? prev.admin_html_notes ?? "",
-    ai_extra_context:  body.ai_extra_context   ?? prev.ai_extra_context ?? "",
-  };
-  writeJson(OVERRIDES_PATH, overrides);
-  const updated = getCountry(country.id);
-  res.json({ ok: true, country: updated, card: buildCard(updated) });
+router.put("/visa/admin/countries/:id", requireAdmin, async (req, res) => {
+  try {
+    const country = await getCountry(String(req.params.id));
+    if (!country) { res.status(404).json({ error: "Country not found" }); return; }
+
+    // Load the current DB override (if any) as the baseline
+    const existing = await db
+      .select()
+      .from(visaCountryOverridesTable)
+      .where(eq(visaCountryOverridesTable.countryId, country.id))
+      .limit(1);
+    const prev: Override = existing.length > 0
+      ? {
+          visa_summary:       existing[0].visaSummary        ?? undefined,
+          stay_rule:          existing[0].stayRule            ?? undefined,
+          insurance_required: existing[0].insuranceRequired   ?? undefined,
+          admin_html_notes:   existing[0].adminHtmlNotes      ?? undefined,
+          ai_extra_context:   existing[0].aiExtraContext       ?? undefined,
+          is_active:          existing[0].isActive            ?? undefined,
+        }
+      : {};
+
+    const body = req.body || {};
+    const updated: Override = {
+      visa_summary:       body.visa_summary      ?? prev.visa_summary,
+      stay_rule:          body.stay_rule          ?? prev.stay_rule,
+      insurance_required: body.insurance_required ?? prev.insurance_required,
+      admin_html_notes:   body.admin_html_notes   ?? prev.admin_html_notes ?? "",
+      ai_extra_context:   body.ai_extra_context   ?? prev.ai_extra_context ?? "",
+      is_active:          body.is_active          ?? prev.is_active,
+    };
+
+    await upsertDbOverride(country.id, updated);
+
+    const updatedCountry = await getCountry(country.id);
+    res.json({ ok: true, country: updatedCountry, card: buildCard(updatedCountry) });
+  } catch (err) {
+    console.error("[visa] PUT /visa/admin/countries/:id error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;
