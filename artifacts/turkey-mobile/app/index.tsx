@@ -26,6 +26,7 @@ import {
 
 const PASSPORT_STORAGE_KEY = 'turkey_travel_passport_country';
 const LANGUAGE_STORAGE_KEY = 'turkey_travel_language';
+const SESSION_STORAGE_KEY = 'turkey_travel_session_id';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -861,32 +862,59 @@ export default function HomeScreen() {
   const t = TRANSLATIONS[lang];
   const isRTL = lang === 'AR';
 
-  // ── Load saved passport + language on first launch ───────────────────────
+  // ── Load saved passport + language + session on first launch ─────────────
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem(PASSPORT_STORAGE_KEY),
       AsyncStorage.getItem(LANGUAGE_STORAGE_KEY),
+      AsyncStorage.getItem(SESSION_STORAGE_KEY),
     ])
-      .then(([passportRaw, langRaw]) => {
+      .then(async ([passportRaw, langRaw, savedSessionId]) => {
         // Restore language
         if (langRaw && LANGUAGES.includes(langRaw as Lang)) {
           setLang(langRaw as Lang);
         }
         // Restore passport
-        if (passportRaw) {
-          const saved: Country = JSON.parse(passportRaw);
-          setSelectedCountry(saved);
-          // Auto-create a session so the user lands straight in chat
-          createSession.mutate(
-            { data: { passportCountryCode: saved.code } },
-            {
-              onSuccess: (session) => setSessionId(session.id),
-              onSettled: () => setIsLoadingPrefs(false),
-            },
-          );
-        } else {
+        if (!passportRaw) {
           setIsLoadingPrefs(false);
+          return;
         }
+        const saved: Country = JSON.parse(passportRaw);
+        setSelectedCountry(saved);
+
+        // Try to restore the previous session before falling back to a new one
+        if (savedSessionId) {
+          try {
+            const apiBase = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+            const resp = await fetch(
+              `${apiBase}/api/chat/session/${savedSessionId}`,
+            );
+            if (resp.ok) {
+              // Session still exists — pick up right where the user left off
+              setSessionId(savedSessionId);
+              setIsLoadingPrefs(false);
+              return;
+            }
+            // Session is gone — remove the stale key so future launches don't retry it
+            AsyncStorage.removeItem(SESSION_STORAGE_KEY).catch(() => {/* ignore */});
+          } catch {
+            // Network error — fall through to create a new session
+          }
+        }
+
+        // No valid saved session — create a fresh one
+        createSession.mutate(
+          { data: { passportCountryCode: saved.code } },
+          {
+            onSuccess: (session) => {
+              setSessionId(session.id);
+              AsyncStorage.setItem(SESSION_STORAGE_KEY, session.id).catch(
+                () => {/* ignore */},
+              );
+            },
+            onSettled: () => setIsLoadingPrefs(false),
+          },
+        );
       })
       .catch(() => setIsLoadingPrefs(false));
     // Run once on mount only
@@ -912,7 +940,14 @@ export default function HomeScreen() {
     );
     createSession.mutate(
       { data: { passportCountryCode: c.code } },
-      { onSuccess: (session) => setSessionId(session.id) },
+      {
+        onSuccess: (session) => {
+          setSessionId(session.id);
+          AsyncStorage.setItem(SESSION_STORAGE_KEY, session.id).catch(
+            () => {/* ignore */},
+          );
+        },
+      },
     );
   };
 
@@ -920,7 +955,9 @@ export default function HomeScreen() {
   const handleChangePassport = () => {
     setSessionId(null);
     setSelectedCountry(null);
-    AsyncStorage.removeItem(PASSPORT_STORAGE_KEY).catch(() => {/* ignore */});
+    AsyncStorage.multiRemove([PASSPORT_STORAGE_KEY, SESSION_STORAGE_KEY]).catch(
+      () => {/* ignore */},
+    );
   };
 
   // Show a loading indicator while we check AsyncStorage / create the session
