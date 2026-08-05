@@ -34,6 +34,27 @@ router.post("/chat/session", async (req, res): Promise<void> => {
   res.status(201).json(CreateChatSessionResponse.parse(session));
 });
 
+// GET /chat/session/:sessionId — get a single chat session
+router.get("/chat/session/:sessionId", async (req, res): Promise<void> => {
+  const { sessionId } = req.params;
+  if (!sessionId) {
+    res.status(400).json({ error: "sessionId is required" });
+    return;
+  }
+
+  const [session] = await db
+    .select()
+    .from(chatSessionsTable)
+    .where(eq(chatSessionsTable.id, sessionId));
+
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  res.json(CreateChatSessionResponse.parse(session));
+});
+
 // GET /chat/session/:sessionId/messages — get messages for a session
 router.get("/chat/session/:sessionId/messages", async (req, res): Promise<void> => {
   const params = GetChatMessagesParams.safeParse(req.params);

@@ -45,6 +45,21 @@ export const CreateChatSessionResponse = zod.object({
 
 
 /**
+ * Returns a chat session by ID
+ * @summary Get a chat session
+ */
+export const GetChatSessionParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const GetChatSessionResponse = zod.object({
+  "id": zod.string(),
+  "passportCountryCode": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * Returns all messages in a chat session
  * @summary Get chat messages
  */

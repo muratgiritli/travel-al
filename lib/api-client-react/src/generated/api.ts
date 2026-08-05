@@ -283,6 +283,84 @@ export const useCreateChatSession = <TError = ErrorType<unknown>,
       return useMutation(getCreateChatSessionMutationOptions(options));
     }
 
+export const getGetChatSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/chat/session/${sessionId}`
+}
+
+/**
+ * Returns a chat session by ID
+ * @summary Get a chat session
+ */
+export const getChatSession = async (sessionId: string, options?: Parameters<typeof customFetch>[1]): Promise<ChatSession> => {
+
+  return customFetch<ChatSession>(getGetChatSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetChatSessionQueryKey = (sessionId: string,) => {
+    return [
+    `/api/chat/session/${sessionId}`
+    ] as const;
+    }
+
+
+export const getGetChatSessionQueryOptions = <TData = Awaited<ReturnType<typeof getChatSession>>, TError = ErrorType<void>>(sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChatSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChatSessionQueryKey(sessionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatSession>>> = ({ signal }) => getChatSession(sessionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetChatSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getChatSession>>>
+export type GetChatSessionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get a chat session
+ */
+
+export function useGetChatSession<TData = Awaited<ReturnType<typeof getChatSession>>, TError = ErrorType<void>>(
+ sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChatSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetChatSessionQueryOptions(sessionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetChatMessagesUrl = (sessionId: string,) => {
 
 

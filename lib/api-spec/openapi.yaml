@@ -65,6 +65,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChatSession"
 
+  /chat/session/{sessionId}:
+    get:
+      operationId: getChatSession
+      tags: [chat]
+      summary: Get a chat session
+      description: Returns a chat session by ID
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chat session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSession"
+        "404":
+          description: Session not found
+
   /chat/session/{sessionId}/messages:
     get:
       operationId: getChatMessages

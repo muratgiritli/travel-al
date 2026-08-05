@@ -8,9 +8,14 @@ import {
   Send,
   ChevronDown,
   Check,
+  PlusCircle,
+  Clock,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useCreateChatSession,
+  useGetChatMessages,
+  useGetChatSession,
   useSendChatMessage,
   useListCountries,
 } from '@workspace/api-client-react';
@@ -46,7 +51,9 @@ function FlagImg({ code, size = 20 }: { code: string; size?: number }) {
       height={Math.round(size * 0.75)}
       className="rounded-[2px] object-cover shrink-0"
       loading="lazy"
-      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      onError={e => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
     />
   );
 }
@@ -69,6 +76,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     footer: 'AI guidance · Human travel experts available.',
     noCountries: 'No countries found.',
     passportSelected: 'Passport selected',
+    newConversation: 'New conversation',
+    previousConversations: 'Previous conversations',
+    resumeConversation: 'Resume',
+    noSnippet: 'Started a new conversation',
   },
   ES: {
     title: 'Asistente de Viaje Turquía',
@@ -83,6 +94,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     footer: 'Orientación IA · Expertos disponibles.',
     noCountries: 'No se encontraron países.',
     passportSelected: 'Pasaporte seleccionado',
+    newConversation: 'Nueva conversación',
+    previousConversations: 'Conversaciones anteriores',
+    resumeConversation: 'Reanudar',
+    noSnippet: 'Inició una nueva conversación',
   },
   AR: {
     title: 'مساعد السفر إلى تركيا',
@@ -97,6 +112,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     footer: 'إرشادات ذكاء اصطناعي · خبراء سفر متاحون.',
     noCountries: 'لا توجد دول.',
     passportSelected: 'تم اختيار جواز السفر',
+    newConversation: 'محادثة جديدة',
+    previousConversations: 'المحادثات السابقة',
+    resumeConversation: 'استئناف',
+    noSnippet: 'بدأت محادثة جديدة',
   },
   FR: {
     title: 'Assistant Voyage Turquie',
@@ -111,6 +130,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     footer: 'Conseils IA · Experts voyage disponibles.',
     noCountries: 'Aucun pays trouvé.',
     passportSelected: 'Passeport sélectionné',
+    newConversation: 'Nouvelle conversation',
+    previousConversations: 'Conversations précédentes',
+    resumeConversation: 'Reprendre',
+    noSnippet: 'Démarré une nouvelle conversation',
   },
   TR: {
     title: 'Türkiye Seyahat Asistanı',
@@ -125,6 +148,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     footer: 'Yapay zeka rehberliği · Uzmanlar mevcut.',
     noCountries: 'Ülke bulunamadı.',
     passportSelected: 'Pasaport seçildi',
+    newConversation: 'Yeni konuşma',
+    previousConversations: 'Önceki konuşmalar',
+    resumeConversation: 'Devam et',
+    noSnippet: 'Yeni bir konuşma başlatıldı',
   },
 };
 
@@ -208,9 +235,66 @@ const STATIC_COUNTRIES = [
 
 const POPULAR_CODES = ['SA', 'EG', 'AE', 'CN', 'PK', 'IN', 'PH'];
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+
+const LS_CURRENT = 'turkey_travel_session';
+const LS_HISTORY = 'turkey_travel_sessions';
+
+interface StoredSession {
+  id: string;
+  passportCountryCode: string;
+  snippet: string;
+  createdAt: string;
+}
+
+function readCurrentSession(): { sessionId: string; passportCountryCode: string } | null {
+  try {
+    const raw = localStorage.getItem(LS_CURRENT);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.sessionId && parsed?.passportCountryCode) return parsed;
+  } catch {}
+  return null;
+}
+
+function saveCurrentSession(sessionId: string, passportCountryCode: string) {
+  localStorage.setItem(LS_CURRENT, JSON.stringify({ sessionId, passportCountryCode }));
+}
+
+function clearCurrentSession() {
+  localStorage.removeItem(LS_CURRENT);
+}
+
+function readSessionHistory(): StoredSession[] {
+  try {
+    const raw = localStorage.getItem(LS_HISTORY);
+    if (!raw) return [];
+    return JSON.parse(raw) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function upsertSessionHistory(session: StoredSession) {
+  const history = readSessionHistory();
+  const idx = history.findIndex(s => s.id === session.id);
+  if (idx !== -1) {
+    history[idx] = { ...history[idx], ...session };
+  } else {
+    history.unshift(session);
+  }
+  localStorage.setItem(LS_HISTORY, JSON.stringify(history.slice(0, 10)));
+}
+
+function removeSessionFromHistory(sessionId: string) {
+  const history = readSessionHistory().filter(s => s.id !== sessionId);
+  localStorage.setItem(LS_HISTORY, JSON.stringify(history));
+}
+
 // ─── Message types ────────────────────────────────────────────────────────────
-// The single messages array is the source of truth for display.
+// The single messages array is the source of truth for NEW conversations.
 // All content — bot responses, user bubbles, and the picker widget — lives here.
+// For RESTORED sessions, apiMessages from the server is used instead.
 
 interface BotMessage {
   kind: 'bot';
@@ -237,10 +321,15 @@ interface WidgetMessage {
   selectedCode?: string;
 }
 
-type ChatMessage = BotMessage | UserMessage | WidgetMessage;
+type LocalChatMessage = BotMessage | UserMessage | WidgetMessage;
 
 let msgCounter = 0;
 const nextId = () => `msg-${++msgCounter}`;
+
+const makeInitialMessages = (): LocalChatMessage[] => [
+  { kind: 'bot', id: nextId(), text: '', i18nKey: 'welcome' },
+  { kind: 'widget', id: nextId(), widgetType: 'country-picker', status: 'active' },
+];
 
 // ─── Country Picker Widget ────────────────────────────────────────────────────
 
@@ -359,11 +448,15 @@ export default function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
-  // Single messages array — the ONLY source of truth for what's rendered
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    { kind: 'bot', id: nextId(), text: '', i18nKey: 'welcome' },
-    { kind: 'widget', id: nextId(), widgetType: 'country-picker', status: 'active' },
-  ]);
+  // Local message array — used for NEW conversations (widget architecture)
+  const [messages, setMessages] = useState<LocalChatMessage[]>(makeInitialMessages);
+
+  // Session persistence state
+  // isRestored = true when we loaded a previous session from localStorage
+  const [isRestored, setIsRestored] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<StoredSession[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -371,19 +464,30 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const t = TRANSLATIONS[lang];
+  const queryClient = useQueryClient();
 
   // API hooks
   const { data: apiCountries } = useListCountries();
   const createSession = useCreateChatSession();
   const sendMessage = useSendChatMessage();
 
+  // Used only when restoring a previous session — fetches historical messages
+  const { data: apiMessages } = useGetChatMessages(sessionId || '', {
+    query: { enabled: !!sessionId && isRestored, queryKey: ['chatMessages', sessionId] },
+  });
+  // Validates that the restored session still exists on the server (retry:false = no retries on 404)
+  const { error: sessionError } = useGetChatSession(sessionId || '', {
+    query: { enabled: !!sessionId && isRestored, retry: false, queryKey: ['chatSession', sessionId] },
+  });
+
   const countries: { code: string; name: string }[] =
     apiCountries?.length
       ? apiCountries.map(c => ({ code: c.code, name: c.name }))
       : STATIC_COUNTRIES;
 
-  // Helpers
-  const appendMessage = useCallback((msg: ChatMessage) => {
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const appendMessage = useCallback((msg: LocalChatMessage) => {
     setMessages(prev => [...prev, msg]);
   }, []);
 
@@ -393,12 +497,64 @@ export default function Home() {
     );
   }, []);
 
-  // Auto-scroll to bottom whenever messages or typing indicator change
+  // ── Restore session from localStorage on first mount ──────────────────────
+
+  useEffect(() => {
+    const stored = readCurrentSession();
+    if (stored) {
+      setSessionId(stored.sessionId);
+      setSelectedCountry(stored.passportCountryCode);
+      setIsRestored(true);
+      setIsUnlocked(true);
+    }
+    setSessionHistory(readSessionHistory());
+  }, []);
+
+  // ── If restored session is gone (confirmed 404 only), clear and reset ────
+  // Only wipe persisted state on HTTP 404 — transient network/server errors
+  // must NOT delete a valid saved session from localStorage.
+
+  useEffect(() => {
+    const is404 = sessionError != null && (sessionError as { status?: number }).status === 404;
+    if (is404 && sessionId && isRestored) {
+      clearCurrentSession();
+      removeSessionFromHistory(sessionId);
+      setSessionId(null);
+      setSelectedCountry(null);
+      setIsRestored(false);
+      setIsUnlocked(false);
+      setMessages(makeInitialMessages());
+      setSessionHistory(readSessionHistory());
+    }
+  }, [sessionError, sessionId, isRestored]);
+
+  // ── Update session snippet from first user message (restored sessions) ────
+
+  useEffect(() => {
+    if (apiMessages && apiMessages.length > 0 && sessionId && selectedCountry && isRestored) {
+      const firstUserMsg = apiMessages.find(m => m.role === 'user');
+      if (firstUserMsg) {
+        const snippet =
+          firstUserMsg.text.slice(0, 70) + (firstUserMsg.text.length > 70 ? '…' : '');
+        upsertSessionHistory({
+          id: sessionId,
+          passportCountryCode: selectedCountry,
+          snippet,
+          createdAt: apiMessages[0].createdAt.toString(),
+        });
+        setSessionHistory(readSessionHistory());
+      }
+    }
+  }, [apiMessages, sessionId, selectedCountry, isRestored]);
+
+  // ── Auto-scroll to bottom ─────────────────────────────────────────────────
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, apiMessages, isTyping]);
 
-  // Auto-resize textarea
+  // ── Auto-resize textarea ──────────────────────────────────────────────────
+
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -406,7 +562,8 @@ export default function Home() {
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   }, [inputValue]);
 
-  // Lang menu: close on outside click or Escape
+  // ── Lang menu: close on outside click or Escape ───────────────────────────
+
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
@@ -424,42 +581,37 @@ export default function Home() {
     };
   }, []);
 
-  // ── Country selection handler ────────────────────────────────────────────────
-  // Finds the widget in the messages array, marks it completed, appends user
-  // bubble, creates session, then appends "How can I help you?" — all in-thread.
+  // ── Country selection handler ─────────────────────────────────────────────
 
   const handleSelectCountry = useCallback(
     (countryCode: string) => {
-      // 1. Find the active widget message id
       const widgetMsg = messages.find(
         m => m.kind === 'widget' && (m as WidgetMessage).status === 'active',
       ) as WidgetMessage | undefined;
       if (!widgetMsg) return;
 
-      // 2. Collapse the picker in-place (stays in history, now shows badge)
+      // Collapse picker in-place, append user bubble
       updateWidget(widgetMsg.id, { status: 'completed', selectedCode: countryCode });
+      appendMessage({ kind: 'user', id: nextId(), text: countryCode, countryCode });
+      setSelectedCountry(countryCode);
+      setShowHistory(false);
 
-      // 3. Append user bubble with flag + code
-      appendMessage({
-        kind: 'user',
-        id: nextId(),
-        text: countryCode,
-        countryCode,
-      });
-
-      // 4. Create API session; on success append the "How can I help?" bot message
       createSession.mutate(
         { data: { passportCountryCode: countryCode } },
         {
           onSuccess: session => {
             setSessionId(session.id);
-            appendMessage({
-              kind: 'bot',
-              id: nextId(),
-              text: '',
-              i18nKey: 'howCanIHelp',
-            });
             setIsUnlocked(true);
+            appendMessage({ kind: 'bot', id: nextId(), text: '', i18nKey: 'howCanIHelp' });
+            // Persist to localStorage
+            saveCurrentSession(session.id, countryCode);
+            upsertSessionHistory({
+              id: session.id,
+              passportCountryCode: countryCode,
+              snippet: '',
+              createdAt: new Date().toISOString(),
+            });
+            setSessionHistory(readSessionHistory());
           },
         },
       );
@@ -467,40 +619,73 @@ export default function Home() {
     [messages, appendMessage, updateWidget, createSession],
   );
 
-  // ── Send message handler ─────────────────────────────────────────────────────
+  // ── Resume a previous session ─────────────────────────────────────────────
+
+  const handleResumeSession = useCallback((stored: StoredSession) => {
+    setSessionId(stored.id);
+    setSelectedCountry(stored.passportCountryCode);
+    setIsRestored(true);
+    setIsUnlocked(true);
+    setShowHistory(false);
+    saveCurrentSession(stored.id, stored.passportCountryCode);
+  }, []);
+
+  // ── Start a fresh conversation ────────────────────────────────────────────
+
+  const handleNewConversation = useCallback(() => {
+    clearCurrentSession();
+    setSessionId(null);
+    setSelectedCountry(null);
+    setIsRestored(false);
+    setIsUnlocked(false);
+    setInputValue('');
+    setMessages(makeInitialMessages());
+  }, []);
+
+  // ── Send message handler ──────────────────────────────────────────────────
 
   const handleSend = useCallback(() => {
     const text = inputValue.trim();
     if (!text || !sessionId) return;
     setInputValue('');
-
-    // Optimistically append user message
-    appendMessage({ kind: 'user', id: nextId(), text });
-
-    // Call API
     setIsTyping(true);
-    sendMessage.mutate(
-      { sessionId, data: { text } },
-      {
-        onSuccess: response => {
-          setIsTyping(false);
-          // The API returns the updated message list; get the last assistant message
-          const assistantText =
-            Array.isArray(response)
-              ? response.filter((m: { role: string }) => m.role === 'assistant').at(-1)?.text ?? ''
-              : (response as { text?: string })?.text ?? '';
-          if (assistantText) {
-            appendMessage({ kind: 'bot', id: nextId(), text: assistantText });
-          }
+
+    if (isRestored) {
+      // Restored sessions: invalidate the messages query so the UI refreshes from the server
+      sendMessage.mutate(
+        { sessionId, data: { text } },
+        {
+          onSuccess: () => {
+            setIsTyping(false);
+            queryClient.invalidateQueries({ queryKey: ['chatMessages', sessionId] });
+          },
+          onError: () => setIsTyping(false),
         },
-        onError: () => {
-          setIsTyping(false);
+      );
+    } else {
+      // New sessions: optimistic local state
+      appendMessage({ kind: 'user', id: nextId(), text });
+      sendMessage.mutate(
+        { sessionId, data: { text } },
+        {
+          onSuccess: response => {
+            setIsTyping(false);
+            const assistantText =
+              Array.isArray(response)
+                ? response.filter((m: { role: string }) => m.role === 'assistant').at(-1)?.text ?? ''
+                : (response as { text?: string })?.text ?? '';
+            if (assistantText) {
+              appendMessage({ kind: 'bot', id: nextId(), text: assistantText });
+            }
+          },
+          onError: () => setIsTyping(false),
         },
-      },
-    );
-  }, [inputValue, sessionId, appendMessage, sendMessage]);
+      );
+    }
+  }, [inputValue, sessionId, isRestored, appendMessage, sendMessage]);
 
   const isRtl = lang === 'AR';
+  const pastSessions = sessionHistory.filter(s => s.id !== sessionId);
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -515,7 +700,7 @@ export default function Home() {
         {/* ── Header ── */}
         <header className="flex items-center justify-between px-3 py-2.5 bg-white border-b shrink-0 z-10" style={{ minHeight: 56 }}>
           <div className="flex items-center gap-2 min-w-0">
-            <button className="p-1.5 -ml-1 rounded-full hover:bg-gray-100 md:hidden shrink-0" aria-label="Back">
+            <button className="p-1.5 -ml-1 rounded-full hover:bg-gray-100 md:hidden shrink-0" data-testid="btn-back" aria-label="Back">
               <ChevronLeft className="w-5 h-5 text-gray-700" />
             </button>
             <div className="relative shrink-0">
@@ -531,6 +716,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {/* Language selector */}
             <div className="relative" ref={langMenuRef}>
               <button
                 onClick={() => setLangMenuOpen(v => !v)}
@@ -557,7 +743,34 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <button className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500" aria-label="Menu">
+
+            {/* New conversation — visible when an active session exists */}
+            {sessionId && (
+              <button
+                onClick={handleNewConversation}
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                data-testid="btn-new-conversation"
+                aria-label={t.newConversation}
+                title={t.newConversation}
+              >
+                <PlusCircle className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* History — visible when no active session and history exists */}
+            {!sessionId && pastSessions.length > 0 && (
+              <button
+                onClick={() => setShowHistory(v => !v)}
+                className={`p-1.5 rounded-full transition-colors ${showHistory ? 'bg-gray-100 text-gray-700' : 'hover:bg-gray-100 text-gray-500'}`}
+                data-testid="btn-show-history"
+                aria-label={t.previousConversations}
+                title={t.previousConversations}
+              >
+                <Clock className="w-5 h-5" />
+              </button>
+            )}
+
+            <button className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500" data-testid="btn-menu" aria-label="Menu">
               <MoreVertical className="w-5 h-5" />
             </button>
           </div>
@@ -570,8 +783,50 @@ export default function Home() {
         >
           <div className="flex flex-col gap-3 max-w-full">
 
-            {messages.map(msg => {
-              // ── Bot message ──────────────────────────────────────────────
+            {/* ── Previous conversations panel ── */}
+            {!sessionId && showHistory && pastSessions.length > 0 && (
+              <div className="ml-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
+                <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-2 px-1">
+                  {t.previousConversations}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {pastSessions.map(session => {
+                    const countryData = countries.find(c => c.code === session.passportCountryCode);
+                    return (
+                      <button
+                        key={session.id}
+                        onClick={() => handleResumeSession(session)}
+                        className="bg-white rounded-2xl shadow-sm border border-gray-100 px-3.5 py-3 flex items-center gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+                        data-testid={`btn-resume-session-${session.id}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-100 shrink-0 flex items-center justify-center">
+                          <FlagImg code={session.passportCountryCode} size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-semibold text-[13px] text-gray-800">
+                              {countryData?.name ?? session.passportCountryCode}
+                            </span>
+                            <span className="text-[11px] text-gray-400 font-medium shrink-0">
+                              {session.passportCountryCode}
+                            </span>
+                          </div>
+                          <p className="text-[12px] text-gray-500 truncate">
+                            {session.snippet || t.noSnippet}
+                          </p>
+                        </div>
+                        <span className="text-[11px] text-[#1A2942] font-semibold shrink-0 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {t.resumeConversation}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── NEW conversation: render local messages array (widgets + bubbles) ── */}
+            {!isRestored && messages.map(msg => {
               if (msg.kind === 'bot') {
                 const text = msg.i18nKey ? (t[msg.i18nKey] ?? msg.text) : msg.text;
                 return (
@@ -584,7 +839,6 @@ export default function Home() {
                 );
               }
 
-              // ── User message ─────────────────────────────────────────────
               if (msg.kind === 'user') {
                 return (
                   <div key={msg.id} className="flex items-end justify-end gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
@@ -602,7 +856,6 @@ export default function Home() {
                 );
               }
 
-              // ── Widget: country picker ────────────────────────────────────
               if (msg.kind === 'widget' && msg.widgetType === 'country-picker') {
                 if (msg.status === 'active') {
                   return (
@@ -614,7 +867,6 @@ export default function Home() {
                     />
                   );
                 }
-                // completed: show collapsed badge in history
                 return (
                   <CompletedPickerBadge
                     key={msg.id}
@@ -627,7 +879,52 @@ export default function Home() {
               return null;
             })}
 
-            {/* Typing indicator — always at the bottom, never stored in messages */}
+            {/* ── RESTORED conversation: welcome + country badge + history from API ── */}
+            {isRestored && (
+              <>
+                {/* Welcome */}
+                <div className="flex items-start gap-2 animate-in fade-in duration-300">
+                  <BotAvatar />
+                  <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-[14px] text-gray-800 max-w-[85%] leading-relaxed">
+                    {t.welcome}
+                  </div>
+                </div>
+
+                {/* Passport country badge */}
+                {selectedCountry && (
+                  <CompletedPickerBadge code={selectedCountry} t={t} />
+                )}
+
+                {/* "How can I help?" */}
+                <div className="flex items-start gap-2 animate-in fade-in duration-300">
+                  <BotAvatar />
+                  <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-[14px] text-gray-800 max-w-[85%] leading-relaxed">
+                    {t.howCanIHelp}
+                  </div>
+                </div>
+
+                {/* Historical messages from server */}
+                {apiMessages?.map(msg => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.role === 'user' ? 'items-end justify-end' : 'items-start'} gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                  >
+                    {msg.role === 'assistant' && <BotAvatar />}
+                    <div
+                      className={`px-3.5 py-2.5 rounded-2xl shadow-sm text-[14px] max-w-[85%] leading-relaxed whitespace-pre-wrap ${
+                        msg.role === 'user'
+                          ? 'bg-[#1A2942] text-white rounded-tr-sm'
+                          : 'bg-white text-gray-800 rounded-tl-sm'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Typing indicator — always at the bottom */}
             {isTyping && (
               <div className="flex items-start gap-2 animate-in fade-in duration-200">
                 <BotAvatar />
@@ -653,10 +950,25 @@ export default function Home() {
             paddingRight: 12,
           }}
         >
+          {/* New conversation shortcut — below composer when in a session */}
+          {sessionId && (
+            <div className="flex justify-center mb-1.5">
+              <button
+                onClick={handleNewConversation}
+                className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 transition-colors px-3 py-0.5 rounded-full hover:bg-gray-50"
+                data-testid="btn-new-conversation-inline"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>{t.newConversation}</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-3xl px-1.5 py-1 focus-within:bg-white focus-within:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <button
               className="p-2 text-gray-400 hover:text-gray-600 shrink-0 rounded-full transition-colors"
               disabled={!isUnlocked}
+              data-testid="btn-attach"
               aria-label="Attach"
             >
               <Paperclip className="w-5 h-5" />
@@ -681,7 +993,7 @@ export default function Home() {
             />
 
             {isUnlocked && !inputValue.trim() ? (
-              <button className="p-2 text-gray-400 hover:text-gray-600 shrink-0 rounded-full transition-colors" aria-label="Voice input">
+              <button className="p-2 text-gray-400 hover:text-gray-600 shrink-0 rounded-full transition-colors" data-testid="btn-mic" aria-label="Voice input">
                 <Mic className="w-5 h-5" />
               </button>
             ) : (
