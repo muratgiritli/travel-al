@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const chatSessionsTable = pgTable("chat_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   passportCountryCode: text("passport_country_code").notNull(),
+  deviceId: text("device_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

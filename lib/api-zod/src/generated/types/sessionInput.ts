@@ -9,4 +9,6 @@
 export interface SessionInput {
   /** ISO 3166-1 alpha-2 code of the user's passport country */
   passportCountryCode: string;
+  /** Anonymous device identifier for server-side history persistence */
+  deviceId?: string;
 }

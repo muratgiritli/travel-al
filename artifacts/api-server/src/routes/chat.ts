@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import { db, chatSessionsTable, chatMessagesTable } from "@workspace/db";
 import {
   CreateChatSessionBody,
@@ -18,6 +18,24 @@ const openai = new OpenAI({
 
 const router: IRouter = Router();
 
+// GET /chat/sessions — list recent sessions for a device
+router.get("/chat/sessions", async (req, res): Promise<void> => {
+  const deviceId = typeof req.query.deviceId === "string" ? req.query.deviceId.trim() : "";
+  if (!deviceId) {
+    res.status(400).json({ error: "deviceId query param is required" });
+    return;
+  }
+
+  const sessions = await db
+    .select()
+    .from(chatSessionsTable)
+    .where(eq(chatSessionsTable.deviceId, deviceId))
+    .orderBy(desc(chatSessionsTable.createdAt))
+    .limit(10);
+
+  res.json(sessions.map(s => CreateChatSessionResponse.parse(s)));
+});
+
 // POST /chat/session — create a new chat session
 router.post("/chat/session", async (req, res): Promise<void> => {
   const parsed = CreateChatSessionBody.safeParse(req.body);
@@ -28,10 +46,34 @@ router.post("/chat/session", async (req, res): Promise<void> => {
 
   const [session] = await db
     .insert(chatSessionsTable)
-    .values({ passportCountryCode: parsed.data.passportCountryCode })
+    .values({
+      passportCountryCode: parsed.data.passportCountryCode,
+      deviceId: parsed.data.deviceId ?? null,
+    })
     .returning();
 
   res.status(201).json(CreateChatSessionResponse.parse(session));
+});
+
+// DELETE /chat/session/:sessionId — permanently delete a session and its messages
+router.delete("/chat/session/:sessionId", async (req, res): Promise<void> => {
+  const { sessionId } = req.params;
+  if (!sessionId) {
+    res.status(400).json({ error: "sessionId is required" });
+    return;
+  }
+
+  const [deleted] = await db
+    .delete(chatSessionsTable)
+    .where(eq(chatSessionsTable.id, sessionId))
+    .returning();
+
+  if (!deleted) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  res.status(204).end();
 });
 
 // GET /chat/session/:sessionId — get a single chat session

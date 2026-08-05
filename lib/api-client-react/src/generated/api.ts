@@ -24,6 +24,7 @@ import type {
   ChatSession,
   Country,
   HealthStatus,
+  ListChatSessionsParams,
   MessageInput,
   SessionInput
 } from './api.schemas';
@@ -211,6 +212,91 @@ export function useListCountries<TData = Awaited<ReturnType<typeof listCountries
 
 
 
+export const getListChatSessionsUrl = (params: ListChatSessionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/chat/sessions?${stringifiedParams}` : `/api/chat/sessions`
+}
+
+/**
+ * Returns recent sessions for an anonymous device identifier
+ * @summary List chat sessions for a device
+ */
+export const listChatSessions = async (params: ListChatSessionsParams, options?: Parameters<typeof customFetch>[1]): Promise<ChatSession[]> => {
+
+  return customFetch<ChatSession[]>(getListChatSessionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatSessionsQueryKey = (params?: ListChatSessionsParams,) => {
+    return [
+    `/api/chat/sessions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListChatSessionsQueryOptions = <TData = Awaited<ReturnType<typeof listChatSessions>>, TError = ErrorType<unknown>>(params: ListChatSessionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatSessionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatSessions>>> = ({ signal }) => listChatSessions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatSessions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof listChatSessions>>>
+export type ListChatSessionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List chat sessions for a device
+ */
+
+export function useListChatSessions<TData = Awaited<ReturnType<typeof listChatSessions>>, TError = ErrorType<unknown>>(
+ params: ListChatSessionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatSessionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getCreateChatSessionUrl = () => {
 
 
@@ -281,6 +367,78 @@ export const useCreateChatSession = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateChatSessionMutationOptions(options));
+    }
+
+export const getDeleteChatSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/chat/session/${sessionId}`
+}
+
+/**
+ * Permanently deletes a chat session and all its messages
+ * @summary Delete a chat session
+ */
+export const deleteChatSession = async (sessionId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteChatSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteChatSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatSession>>, TError,{sessionId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChatSession>>, TError,{sessionId: string}, TContext> => {
+
+const mutationKey = ['deleteChatSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChatSession>>, {sessionId: string}> = (props) => {
+          const {sessionId} = props ?? {};
+
+          return  deleteChatSession(sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChatSessionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChatSession>>>
+
+    export type DeleteChatSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a chat session
+ */
+export const useDeleteChatSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatSession>>, TError,{sessionId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChatSession>>,
+        TError,
+        {sessionId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteChatSessionMutationOptions(options));
     }
 
 export const getGetChatSessionUrl = (sessionId: string,) => {

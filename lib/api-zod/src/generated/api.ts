@@ -30,11 +30,28 @@ export const ListCountriesResponse = zod.array(ListCountriesResponseItem)
 
 
 /**
+ * Returns recent sessions for an anonymous device identifier
+ * @summary List chat sessions for a device
+ */
+export const ListChatSessionsQueryParams = zod.object({
+  "deviceId": zod.coerce.string()
+})
+
+export const ListChatSessionsResponseItem = zod.object({
+  "id": zod.string(),
+  "passportCountryCode": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListChatSessionsResponse = zod.array(ListChatSessionsResponseItem)
+
+
+/**
  * Start a new chat session with a selected passport country
  * @summary Create a chat session
  */
 export const CreateChatSessionBody = zod.object({
-  "passportCountryCode": zod.string().describe('ISO 3166-1 alpha-2 code of the user\'s passport country')
+  "passportCountryCode": zod.string().describe('ISO 3166-1 alpha-2 code of the user\'s passport country'),
+  "deviceId": zod.string().optional().describe('Anonymous device identifier for server-side history persistence')
 })
 
 export const CreateChatSessionResponse = zod.object({
@@ -42,6 +59,17 @@ export const CreateChatSessionResponse = zod.object({
   "passportCountryCode": zod.string(),
   "createdAt": zod.coerce.date()
 })
+
+
+/**
+ * Permanently deletes a chat session and all its messages
+ * @summary Delete a chat session
+ */
+export const DeleteChatSessionParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const DeleteChatSessionResponse = zod.void()
 
 
 /**

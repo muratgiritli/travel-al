@@ -11,5 +11,6 @@ export * from './chatMessageRole';
 export * from './chatSession';
 export * from './country';
 export * from './healthStatus';
+export * from './listChatSessionsParams';
 export * from './messageInput';
 export * from './sessionInput';

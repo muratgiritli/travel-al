@@ -17,9 +17,11 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCreateChatSession,
+  useDeleteChatSession,
   useGetChatMessages,
   useGetChatSession,
   useListCountries,
+  useListChatSessions,
 } from '@workspace/api-client-react';
 
 // ─── Mosque SVG icon ──────────────────────────────────────────────────────────
@@ -256,6 +258,41 @@ const STATIC_COUNTRIES = [
 ];
 
 const POPULAR_CODES = ['SA', 'EG', 'AE', 'CN', 'PK', 'IN', 'PH'];
+
+// ─── Device ID (cookie-based, survives localStorage clears) ──────────────────
+
+const DEVICE_ID_COOKIE = 'turkey_device_id';
+
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setCookie(name: string, value: string, days: number) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function getOrCreateDeviceId(): string {
+  let id = getCookie(DEVICE_ID_COOKIE);
+  if (!id) {
+    id = generateUUID();
+    setCookie(DEVICE_ID_COOKIE, id, 365);
+  }
+  return id;
+}
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
@@ -496,6 +533,9 @@ export default function Home() {
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState('');
 
+  // Stable device ID stored in a cookie — survives localStorage clears
+  const [deviceId] = useState<string>(() => getOrCreateDeviceId());
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -507,6 +547,13 @@ export default function Home() {
   // API hooks
   const { data: apiCountries } = useListCountries();
   const createSession = useCreateChatSession();
+  const deleteSession = useDeleteChatSession();
+
+  // Fetch session list from server — this is the durable source of truth
+  const { data: serverSessions } = useListChatSessions(
+    { deviceId },
+    { query: { queryKey: ['chatSessions', deviceId], staleTime: 30_000 } },
+  );
 
   // Used only when restoring a previous session — fetches historical messages
   const { data: apiMessages } = useGetChatMessages(sessionId || '', {
@@ -546,6 +593,25 @@ export default function Home() {
     }
     setSessionHistory(readSessionHistory());
   }, []);
+
+  // ── Seed localStorage from server sessions when they arrive ───────────────
+  // Server is the durable source of truth. Merge server sessions into the
+  // local cache so history survives browser storage clears.
+
+  useEffect(() => {
+    if (!serverSessions) return;
+    serverSessions.forEach(s => {
+      const existing = readSessionHistory().find(h => h.id === s.id);
+      upsertSessionHistory({
+        id: s.id,
+        passportCountryCode: s.passportCountryCode,
+        snippet: existing?.snippet ?? '',
+        createdAt: s.createdAt.toString(),
+        label: existing?.label,
+      });
+    });
+    setSessionHistory(readSessionHistory());
+  }, [serverSessions]);
 
   // ── If restored session is gone (confirmed 404 only), clear and reset ────
   // Only wipe persisted state on HTTP 404 — transient network/server errors
@@ -634,7 +700,7 @@ export default function Home() {
       setShowHistory(false);
 
       createSession.mutate(
-        { data: { passportCountryCode: countryCode } },
+        { data: { passportCountryCode: countryCode, deviceId } },
         {
           onSuccess: session => {
             setSessionId(session.id);
@@ -653,7 +719,7 @@ export default function Home() {
         },
       );
     },
-    [messages, appendMessage, updateWidget, createSession],
+    [messages, appendMessage, updateWidget, createSession, deviceId],
   );
 
   // ── Resume a previous session ─────────────────────────────────────────────
@@ -671,10 +737,13 @@ export default function Home() {
 
   const handleDeleteSession = useCallback((sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    // Remove from local cache immediately for a snappy UI
     removeSessionFromHistory(sessionId);
     setSessionHistory(readSessionHistory());
     if (renamingSessionId === sessionId) setRenamingSessionId(null);
-  }, [renamingSessionId]);
+    // Persist the deletion to the server so it doesn't come back on next load
+    deleteSession.mutate({ sessionId });
+  }, [renamingSessionId, deleteSession]);
 
   // ── Start rename flow ─────────────────────────────────────────────────────
 

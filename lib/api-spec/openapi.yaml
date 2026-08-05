@@ -45,6 +45,28 @@ paths:
                 items:
                   $ref: "#/components/schemas/Country"
 
+  /chat/sessions:
+    get:
+      operationId: listChatSessions
+      tags: [chat]
+      summary: List chat sessions for a device
+      description: Returns recent sessions for an anonymous device identifier
+      parameters:
+        - name: deviceId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatSession"
+
   /chat/session:
     post:
       operationId: createChatSession
@@ -66,6 +88,22 @@ paths:
                 $ref: "#/components/schemas/ChatSession"
 
   /chat/session/{sessionId}:
+    delete:
+      operationId: deleteChatSession
+      tags: [chat]
+      summary: Delete a chat session
+      description: Permanently deletes a chat session and all its messages
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Session deleted
+        "404":
+          description: Session not found
     get:
       operationId: getChatSession
       tags: [chat]
@@ -164,6 +202,9 @@ components:
         passportCountryCode:
           type: string
           description: ISO 3166-1 alpha-2 code of the user's passport country
+        deviceId:
+          type: string
+          description: Anonymous device identifier for server-side history persistence
 
     ChatSession:
       type: object
