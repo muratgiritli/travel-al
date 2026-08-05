@@ -518,6 +518,7 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   // null = not streaming; string = actively streaming bot reply (grows token by token)
   const [streamingBotText, setStreamingBotText] = useState<string | null>(null);
+  const [historyTrimmed, setHistoryTrimmed] = useState(false);
   // Optimistic user message shown during streaming for restored sessions
   const [streamingUserText, setStreamingUserText] = useState<string | null>(null);
 
@@ -627,6 +628,7 @@ export default function Home() {
       setIsRestored(false);
       setIsUnlocked(false);
       setMessages(makeInitialMessages());
+      setHistoryTrimmed(false);
       setSessionHistory(readSessionHistory());
     }
   }, [sessionError, sessionId, isRestored]);
@@ -730,6 +732,7 @@ export default function Home() {
     setIsRestored(true);
     setIsUnlocked(true);
     setShowHistory(false);
+    setHistoryTrimmed(false);
     saveCurrentSession(stored.id, stored.passportCountryCode);
   }, []);
 
@@ -772,6 +775,7 @@ export default function Home() {
     setIsUnlocked(false);
     setInputValue('');
     setMessages(makeInitialMessages());
+    setHistoryTrimmed(false);
   }, []);
 
   // ── Send message handler (SSE streaming) ─────────────────────────────────
@@ -843,6 +847,12 @@ export default function Home() {
           if (!line.startsWith('data: ')) continue;
           const payload = line.slice(6);
           if (payload === '[DONE]') continue;
+
+          // Server notifies that old messages were trimmed from context
+          if (payload === '[TRIMMED]') {
+            setHistoryTrimmed(true);
+            continue;
+          }
 
           // Server signals an AI error — treat as terminal failure
           if (payload.startsWith('[ERROR]')) {
@@ -1187,6 +1197,15 @@ export default function Home() {
                   </div>
                 ))}
               </>
+            )}
+
+            {/* History trimming notice — shown once trimming has occurred */}
+            {historyTrimmed && (
+              <div className="flex justify-center animate-in fade-in duration-500">
+                <span className="text-[11px] text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                  Earlier messages are no longer included for efficiency
+                </span>
+              </div>
             )}
 
             {/* Optimistic user message during streaming (restored sessions only) */}

@@ -505,11 +505,18 @@ function ChatScreen({
   const [optimisticMsgs, setOptimisticMsgs] = useState<OptimisticMessage[]>([]);
   // isTyping: spinner shown before first token arrives
   const [isTyping, setIsTyping] = useState(false);
+  // historyTrimmed: true once the server has trimmed old messages from context
+  const [historyTrimmed, setHistoryTrimmed] = useState(false);
   // streamingText: non-null once the first SSE token arrives; grows token by token
   const [streamingText, setStreamingText] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+
+  // Reset trimming notice whenever the active session changes
+  useEffect(() => {
+    setHistoryTrimmed(false);
+  }, [sessionId]);
 
   // Abort any in-flight SSE stream when the component unmounts
   useEffect(() => {
@@ -626,6 +633,12 @@ function ChatScreen({
                 queryKey: ['chatMessages', currentSessionId],
               });
               return;
+            }
+
+            // Server notifies that old messages were trimmed from context
+            if (data === '[TRIMMED]') {
+              setHistoryTrimmed(true);
+              continue;
             }
 
             if (data.startsWith('[ERROR]')) {
@@ -750,6 +763,15 @@ function ChatScreen({
               <MessageBubble msg={item} colors={colors} />
             )}
           />
+        )}
+
+        {/* History trimming notice — shown once trimming has occurred */}
+        {historyTrimmed && (
+          <View style={styles.trimNotice}>
+            <Text style={[styles.trimNoticeText, { color: colors.mutedForeground }]}>
+              Earlier messages are no longer included for efficiency
+            </Text>
+          </View>
         )}
 
         {/* Input bar */}
@@ -1139,6 +1161,16 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   welcomeIntroText: { fontSize: 15, lineHeight: 22 },
+
+  trimNotice: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  trimNoticeText: {
+    fontSize: 11,
+    textAlign: 'center',
+  },
 
   inputBar: {
     flexDirection: 'row',

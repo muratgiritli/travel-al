@@ -156,6 +156,7 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
   // Cap history at the last 20 messages to control API costs and avoid
   // exceeding the context window. The system prompt is always included.
   const MAX_HISTORY_MESSAGES = 20;
+  const historyTrimmed = history.length > MAX_HISTORY_MESSAGES;
   const cappedHistory = history.slice(-MAX_HISTORY_MESSAGES);
 
   const systemPrompt =
@@ -180,6 +181,11 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
+
+    // Notify client if old messages were trimmed from the context window
+    if (historyTrimmed) {
+      res.write("data: [TRIMMED]\n\n");
+    }
 
     let assistantText = "";
     let clientDisconnected = false;
@@ -248,6 +254,9 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     res.end();
   } else {
     // ── Non-streaming JSON path (used by mobile and generated API client) ────
+    if (historyTrimmed) {
+      res.setHeader("X-History-Trimmed", "true");
+    }
     let assistantText: string;
     try {
       const completion = await openai.chat.completions.create({
