@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   useColorScheme,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -22,6 +23,8 @@ import {
   useGetChatMessages,
   useSendChatMessage,
 } from '@workspace/api-client-react';
+
+const PASSPORT_STORAGE_KEY = 'turkey_travel_passport_country';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -370,12 +373,14 @@ function ChatScreen({
   sessionId,
   selectedCountry,
   onBack,
+  onChangePassport,
   apiMessages,
   messagesLoading,
 }: {
   sessionId: string;
   selectedCountry: Country;
   onBack: () => void;
+  onChangePassport: () => void;
   apiMessages: ChatMessage[] | undefined;
   messagesLoading: boolean;
 }) {
@@ -465,17 +470,6 @@ function ChatScreen({
           },
         ]}
       >
-        <Pressable
-          onPress={onBack}
-          testID="btn-back"
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.backBtn,
-            pressed && { opacity: 0.6 },
-          ]}
-        >
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </Pressable>
         <AssistantAvatar size={38} />
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderTitle}>Turkey Travel</Text>
@@ -484,10 +478,19 @@ function ChatScreen({
             <Text style={styles.onlineText}>Online</Text>
           </View>
         </View>
-        <View style={styles.passportBadge}>
+        <Pressable
+          testID="btn-change-passport"
+          onPress={onChangePassport}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.passportBadge,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
           <Text style={styles.passportFlag}>{selectedCountry.flag}</Text>
           <Text style={styles.passportCode}>{selectedCountry.code}</Text>
-        </View>
+          <Feather name="edit-2" size={11} color="rgba(255,255,255,0.75)" />
+        </Pressable>
       </View>
 
       {/* Messages */}
@@ -605,6 +608,8 @@ export default function HomeScreen() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  // true while we're checking AsyncStorage on first launch
+  const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
 
   const { data: apiMessages, isLoading: messagesLoading } = useGetChatMessages(
     sessionId ?? '',
@@ -614,25 +619,65 @@ export default function HomeScreen() {
   const countries: Country[] =
     apiCountries && apiCountries.length > 0 ? apiCountries : STATIC_COUNTRIES;
 
+  // ── Load saved passport on first launch ──────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(PASSPORT_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const saved: Country = JSON.parse(raw);
+          setSelectedCountry(saved);
+          // Auto-create a session so the user lands straight in chat
+          createSession.mutate(
+            { data: { passportCountryCode: saved.code } },
+            {
+              onSuccess: (session) => setSessionId(session.id),
+              onSettled: () => setIsLoadingPrefs(false),
+            },
+          );
+        } else {
+          setIsLoadingPrefs(false);
+        }
+      })
+      .catch(() => setIsLoadingPrefs(false));
+    // Run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Persist + create session when user picks a country ───────────────────
   const handleSelectCountry = (c: Country) => {
     setSelectedCountry(c);
+    AsyncStorage.setItem(PASSPORT_STORAGE_KEY, JSON.stringify(c)).catch(
+      () => {/* ignore storage errors */},
+    );
     createSession.mutate(
       { data: { passportCountryCode: c.code } },
       { onSuccess: (session) => setSessionId(session.id) },
     );
   };
 
-  const handleBack = () => {
+  // ── "Change passport" — clear session and go back to selection ───────────
+  const handleChangePassport = () => {
     setSessionId(null);
     setSelectedCountry(null);
+    AsyncStorage.removeItem(PASSPORT_STORAGE_KEY).catch(() => {/* ignore */});
   };
+
+  // Show a loading indicator while we check AsyncStorage / create the session
+  if (isLoadingPrefs) {
+    return (
+      <View style={[styles.flex, styles.loadingCenter]}>
+        <ActivityIndicator size="large" color="#F59E0B" />
+      </View>
+    );
+  }
 
   if (sessionId && selectedCountry) {
     return (
       <ChatScreen
         sessionId={sessionId}
         selectedCountry={selectedCountry}
-        onBack={handleBack}
+        onBack={handleChangePassport}
+        onChangePassport={handleChangePassport}
         apiMessages={apiMessages as ChatMessage[] | undefined}
         messagesLoading={messagesLoading}
       />
@@ -652,6 +697,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  loadingCenter: { alignItems: 'center', justifyContent: 'center' },
 
   // Passport screen
   passportHeader: {
