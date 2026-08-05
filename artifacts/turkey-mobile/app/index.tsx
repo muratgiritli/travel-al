@@ -22,7 +22,6 @@ import {
   useListCountries,
   useCreateChatSession,
   useGetChatMessages,
-  useSendChatMessage,
 } from '@workspace/api-client-react';
 
 const PASSPORT_STORAGE_KEY = 'turkey_travel_passport_country';
@@ -504,19 +503,42 @@ function ChatScreen({
   const insets = useSafeAreaInsets();
   const [input, setInput] = useState('');
   const [optimisticMsgs, setOptimisticMsgs] = useState<OptimisticMessage[]>([]);
+  // isTyping: spinner shown before first token arrives
   const [isTyping, setIsTyping] = useState(false);
+  // streamingText: non-null once the first SSE token arrives; grows token by token
+  const [streamingText, setStreamingText] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
-  const sendMessage = useSendChatMessage();
+  const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+
+  // Abort any in-flight SSE stream when the component unmounts
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const rtlText = isRTL ? { textAlign: 'right' as const, writingDirection: 'rtl' as const } : {};
 
-  // Merge API messages with optimistic ones, deduplicated by id
+  // Build the streaming assistant bubble (null when not streaming)
+  const streamingMessage: OptimisticMessage | null =
+    streamingText !== null
+      ? {
+          id: 'streaming-assistant',
+          sessionId,
+          role: 'assistant',
+          text: streamingText || '…',
+          createdAt: new Date().toISOString(),
+        }
+      : null;
+
+  // Merge API messages with optimistic ones, deduplicated by id, plus the live streaming bubble
   const allMessages: OptimisticMessage[] = [
     ...(apiMessages ?? []),
     ...optimisticMsgs.filter(
       (opt) => !(apiMessages ?? []).find((m) => m.id === opt.id),
     ),
+    ...(streamingMessage ? [streamingMessage] : []),
   ].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
@@ -524,9 +546,12 @@ function ChatScreen({
   // Reversed for inverted FlatList
   const reversed = [...allMessages].reverse();
 
+  // true while a request is in-flight (typing indicator or streaming)
+  const isSending = isTyping || streamingText !== null;
+
   const handleSend = () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || isSending) return;
     setInput('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const optimisticId =
@@ -543,31 +568,99 @@ function ChatScreen({
     const currentSessionId = sessionId;
     setOptimisticMsgs((prev) => [...prev, optimistic]);
     setIsTyping(true);
-    sendMessage.mutate(
-      { sessionId: currentSessionId, data: { text } },
-      {
-        onSuccess: (assistantMsg) => {
-          setIsTyping(false);
-          // Remove the optimistic user msg — it will be present in the refetch
-          setOptimisticMsgs((prev) =>
-            prev.filter((m) => m.id !== optimisticId),
-          );
-          // Invalidate so React Query fetches the real message list
-          queryClient.invalidateQueries({
-            queryKey: ['chatMessages', currentSessionId],
-          });
-        },
-        onError: () => {
-          setIsTyping(false);
-          // Mark the optimistic message as failed (keep it visible but dim)
-          setOptimisticMsgs((prev) =>
-            prev.map((m) =>
-              m.id === optimisticId ? { ...m, text: `${m.text} ⚠️` } : m,
-            ),
-          );
-        },
-      },
-    );
+
+    // Cancel any previously in-flight stream
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // Build the absolute API URL using the same domain Expo uses for all API calls
+    const apiBase = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    const url = `${apiBase}/api/chat/session/${currentSessionId}/messages`;
+
+    (async () => {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({ text }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        // First token is about to arrive — hide typing indicator, show streaming bubble
+        setIsTyping(false);
+        setStreamingText('');
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Split on newlines; keep the last (possibly incomplete) line in the buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+
+            if (data === '[DONE]') {
+              // Stream complete — finalise
+              setStreamingText(null);
+              setOptimisticMsgs((prev) =>
+                prev.filter((m) => m.id !== optimisticId),
+              );
+              queryClient.invalidateQueries({
+                queryKey: ['chatMessages', currentSessionId],
+              });
+              return;
+            }
+
+            if (data.startsWith('[ERROR]')) {
+              throw new Error(data.slice(8).trim() || 'AI error');
+            }
+
+            // Server escapes literal newlines as \\n — restore them
+            const token = data.replace(/\\n/g, '\n');
+            setStreamingText((prev) => (prev ?? '') + token);
+          }
+        }
+
+        // Reached end of stream without an explicit [DONE] — still clean up
+        setStreamingText(null);
+        setOptimisticMsgs((prev) =>
+          prev.filter((m) => m.id !== optimisticId),
+        );
+        queryClient.invalidateQueries({
+          queryKey: ['chatMessages', currentSessionId],
+        });
+      } catch (err: unknown) {
+        // AbortError means the user navigated away or sent a new message — ignore silently
+        if (err instanceof Error && err.name === 'AbortError') return;
+
+        setIsTyping(false);
+        setStreamingText(null);
+        // Mark the optimistic message as failed (keep it visible but indicate error)
+        setOptimisticMsgs((prev) =>
+          prev.map((m) =>
+            m.id === optimisticId ? { ...m, text: `${m.text} ⚠️` } : m,
+          ),
+        );
+      }
+    })();
+
     // Keep keyboard open after send
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -697,7 +790,7 @@ function ChatScreen({
           <Pressable
             testID="btn-send"
             onPress={handleSend}
-            disabled={!input.trim() || sendMessage.isPending}
+            disabled={!input.trim() || isSending}
             style={({ pressed }) => [
               styles.sendBtn,
               {
@@ -707,7 +800,7 @@ function ChatScreen({
               },
             ]}
           >
-            {sendMessage.isPending ? (
+            {isSending ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Ionicons
