@@ -10,6 +10,9 @@ import {
   Check,
   PlusCircle,
   Clock,
+  Trash2,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -79,6 +82,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     previousConversations: 'Previous conversations',
     resumeConversation: 'Resume',
     noSnippet: 'Started a new conversation',
+    deleteConversation: 'Delete',
+    renameConversation: 'Rename',
+    renamePlaceholder: 'Name this conversation…',
+    cancelRename: 'Cancel',
   },
   ES: {
     title: 'Asistente de Viaje Turquía',
@@ -97,6 +104,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     previousConversations: 'Conversaciones anteriores',
     resumeConversation: 'Reanudar',
     noSnippet: 'Inició una nueva conversación',
+    deleteConversation: 'Eliminar',
+    renameConversation: 'Renombrar',
+    renamePlaceholder: 'Nombra esta conversación…',
+    cancelRename: 'Cancelar',
   },
   AR: {
     title: 'مساعد السفر إلى تركيا',
@@ -115,6 +126,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     previousConversations: 'المحادثات السابقة',
     resumeConversation: 'استئناف',
     noSnippet: 'بدأت محادثة جديدة',
+    deleteConversation: 'حذف',
+    renameConversation: 'إعادة تسمية',
+    renamePlaceholder: 'سمِّ هذه المحادثة…',
+    cancelRename: 'إلغاء',
   },
   FR: {
     title: 'Assistant Voyage Turquie',
@@ -133,6 +148,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     previousConversations: 'Conversations précédentes',
     resumeConversation: 'Reprendre',
     noSnippet: 'Démarré une nouvelle conversation',
+    deleteConversation: 'Supprimer',
+    renameConversation: 'Renommer',
+    renamePlaceholder: 'Nommer cette conversation…',
+    cancelRename: 'Annuler',
   },
   TR: {
     title: 'Türkiye Seyahat Asistanı',
@@ -151,6 +170,10 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     previousConversations: 'Önceki konuşmalar',
     resumeConversation: 'Devam et',
     noSnippet: 'Yeni bir konuşma başlatıldı',
+    deleteConversation: 'Sil',
+    renameConversation: 'Yeniden adlandır',
+    renamePlaceholder: 'Bu konuşmayı adlandırın…',
+    cancelRename: 'İptal',
   },
 };
 
@@ -244,6 +267,7 @@ interface StoredSession {
   passportCountryCode: string;
   snippet: string;
   createdAt: string;
+  label?: string;
 }
 
 function readCurrentSession(): { sessionId: string; passportCountryCode: string } | null {
@@ -288,6 +312,15 @@ function upsertSessionHistory(session: StoredSession) {
 function removeSessionFromHistory(sessionId: string) {
   const history = readSessionHistory().filter(s => s.id !== sessionId);
   localStorage.setItem(LS_HISTORY, JSON.stringify(history));
+}
+
+function renameSessionInHistory(sessionId: string, label: string) {
+  const history = readSessionHistory();
+  const idx = history.findIndex(s => s.id === sessionId);
+  if (idx !== -1) {
+    history[idx] = { ...history[idx], label: label.trim() || undefined };
+    localStorage.setItem(LS_HISTORY, JSON.stringify(history));
+  }
 }
 
 // ─── Message types ────────────────────────────────────────────────────────────
@@ -460,6 +493,8 @@ export default function Home() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [sessionHistory, setSessionHistory] = useState<StoredSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [renameInput, setRenameInput] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -631,6 +666,32 @@ export default function Home() {
     setShowHistory(false);
     saveCurrentSession(stored.id, stored.passportCountryCode);
   }, []);
+
+  // ── Delete a session from history ─────────────────────────────────────────
+
+  const handleDeleteSession = useCallback((sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeSessionFromHistory(sessionId);
+    setSessionHistory(readSessionHistory());
+    if (renamingSessionId === sessionId) setRenamingSessionId(null);
+  }, [renamingSessionId]);
+
+  // ── Start rename flow ─────────────────────────────────────────────────────
+
+  const handleStartRename = useCallback((session: StoredSession, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingSessionId(session.id);
+    setRenameInput(session.label ?? '');
+  }, []);
+
+  // ── Commit rename ─────────────────────────────────────────────────────────
+
+  const handleCommitRename = useCallback((sessionId: string) => {
+    renameSessionInHistory(sessionId, renameInput);
+    setSessionHistory(readSessionHistory());
+    setRenamingSessionId(null);
+    setRenameInput('');
+  }, [renameInput]);
 
   // ── Start a fresh conversation ────────────────────────────────────────────
 
@@ -855,33 +916,105 @@ export default function Home() {
                 <div className="flex flex-col gap-2">
                   {pastSessions.map(session => {
                     const countryData = countries.find(c => c.code === session.passportCountryCode);
+                    const isRenaming = renamingSessionId === session.id;
                     return (
-                      <button
+                      <div
                         key={session.id}
-                        onClick={() => handleResumeSession(session)}
-                        className="bg-white rounded-2xl shadow-sm border border-gray-100 px-3.5 py-3 flex items-center gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-                        data-testid={`btn-resume-session-${session.id}`}
+                        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
                       >
-                        <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-100 shrink-0 flex items-center justify-center">
-                          <FlagImg code={session.passportCountryCode} size={18} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="font-semibold text-[13px] text-gray-800">
-                              {countryData?.name ?? session.passportCountryCode}
-                            </span>
-                            <span className="text-[11px] text-gray-400 font-medium shrink-0">
-                              {session.passportCountryCode}
+                        {/* ── Rename row (shown when editing) ── */}
+                        {isRenaming && (
+                          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 animate-in fade-in duration-150">
+                            <input
+                              autoFocus
+                              type="text"
+                              value={renameInput}
+                              onChange={e => setRenameInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleCommitRename(session.id);
+                                if (e.key === 'Escape') { setRenamingSessionId(null); setRenameInput(''); }
+                              }}
+                              placeholder={t.renamePlaceholder}
+                              className="flex-1 text-[13px] text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-gray-400"
+                              data-testid={`input-rename-${session.id}`}
+                            />
+                            <button
+                              onClick={() => handleCommitRename(session.id)}
+                              className="shrink-0 w-7 h-7 rounded-full bg-[#1A2942] flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                              aria-label="Save name"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { setRenamingSessionId(null); setRenameInput(''); }}
+                              className="shrink-0 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+                              aria-label={t.cancelRename}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* ── Main card row ── */}
+                        <div className="flex items-center gap-3 px-3.5 py-3">
+                          {/* Flag circle */}
+                          <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-100 shrink-0 flex items-center justify-center">
+                            <FlagImg code={session.passportCountryCode} size={18} />
+                          </div>
+
+                          {/* Text — tappable to resume */}
+                          <button
+                            onClick={() => handleResumeSession(session)}
+                            className="min-w-0 flex-1 text-left"
+                            data-testid={`btn-resume-session-${session.id}`}
+                          >
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              {session.label ? (
+                                <span className="font-semibold text-[13px] text-gray-800 truncate">
+                                  {session.label}
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="font-semibold text-[13px] text-gray-800">
+                                    {countryData?.name ?? session.passportCountryCode}
+                                  </span>
+                                  <span className="text-[11px] text-gray-400 font-medium shrink-0">
+                                    {session.passportCountryCode}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <p className="text-[12px] text-gray-500 truncate">
+                              {session.snippet || t.noSnippet}
+                            </p>
+                          </button>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={e => handleStartRename(session, e)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                              aria-label={t.renameConversation}
+                              title={t.renameConversation}
+                              data-testid={`btn-rename-session-${session.id}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={e => handleDeleteSession(session.id, e)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              aria-label={t.deleteConversation}
+                              title={t.deleteConversation}
+                              data-testid={`btn-delete-session-${session.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-[11px] text-[#1A2942] font-semibold shrink-0 bg-blue-50 px-2 py-0.5 rounded-full ml-1">
+                              {t.resumeConversation}
                             </span>
                           </div>
-                          <p className="text-[12px] text-gray-500 truncate">
-                            {session.snippet || t.noSnippet}
-                          </p>
                         </div>
-                        <span className="text-[11px] text-[#1A2942] font-semibold shrink-0 bg-blue-50 px-2 py-0.5 rounded-full">
-                          {t.resumeConversation}
-                        </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
