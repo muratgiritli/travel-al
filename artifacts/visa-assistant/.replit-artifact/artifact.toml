@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/visa/"
+title = "Visa Assistant"
+description = "Turkey Travel Visa Assistant — chat UI for 97 visa-exempt countries with rich insurance card and country-level admin panel."
+version = "1.0.0"
+id = "artifacts/visa-assistant"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/visa/" ]
+localPort = 21735
+
+[services.development]
+run = "pnpm --filter @workspace/visa-assistant run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/visa-assistant", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/visa-assistant/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21735"
+BASE_PATH = "/visa/"

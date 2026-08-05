@@ -1,0 +1,907 @@
+{
+  "category": "visa_exempt",
+  "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
+  "note": "Ordinary (umuma mahsus) passport, tourism/business. Insurance messaging is product policy, not MFA text.",
+  "defaults": {
+    "category": "visa_exempt",
+    "insurance_required": true,
+    "visa_summary": "Visa exempt • 90 days / 180",
+    "stay_rule": "Citizens can enter Türkiye visa-free for up to 90 days within any 180-day period.",
+    "headline": "Travel insurance is required for your stay",
+    "features": [
+      "Turkish Law compliant",
+      "Instant digital PDF policy",
+      "Coverage for full stay length"
+    ],
+    "price_label": "Standard Plan • $5 / day",
+    "price_example": "Example: 10 days × 1 traveler = $50",
+    "cta": "Get travel insurance",
+    "is_active": true,
+    "admin_html_notes": "",
+    "ai_extra_context": ""
+  },
+  "countries": [
+    {
+      "id": "us",
+      "name": "United States",
+      "name_tr": "ABD",
+      "iso2": "US",
+      "flag_emoji": "🇺🇸",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "US citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "de",
+      "name": "Germany",
+      "name_tr": "Almanya",
+      "iso2": "DE",
+      "flag_emoji": "🇩🇪",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "German citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "ad",
+      "name": "Andorra",
+      "name_tr": "Andora",
+      "iso2": "AD",
+      "flag_emoji": "🇦🇩",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Andorran citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "ar",
+      "name": "Argentina",
+      "name_tr": "Arjantin",
+      "iso2": "AR",
+      "flag_emoji": "🇦🇷",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Argentinian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "al",
+      "name": "Albania",
+      "name_tr": "Arnavutluk",
+      "iso2": "AL",
+      "flag_emoji": "🇦🇱",
+      "visa_summary": "Visa exempt • 90 days / 6 months",
+      "stay_rule": "Albanian citizens can enter Türkiye visa-free for tourism/transit for up to 90 days within 6 months from first entry."
+    },
+    {
+      "id": "au",
+      "name": "Australia",
+      "name_tr": "Avustralya",
+      "iso2": "AU",
+      "flag_emoji": "🇦🇺",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Australian ordinary passport holders are visa-exempt for tourism/transit for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "at",
+      "name": "Austria",
+      "name_tr": "Avusturya",
+      "iso2": "AT",
+      "flag_emoji": "🇦🇹",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Austrian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "az",
+      "name": "Azerbaijan",
+      "name_tr": "Azerbaycan",
+      "iso2": "AZ",
+      "flag_emoji": "🇦🇿",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Azerbaijani citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "bh",
+      "name": "Bahrain",
+      "name_tr": "Bahreyn",
+      "iso2": "BH",
+      "flag_emoji": "🇧🇭",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Bahraini citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "by",
+      "name": "Belarus",
+      "name_tr": "Belarus",
+      "iso2": "BY",
+      "flag_emoji": "🇧🇾",
+      "visa_summary": "Visa exempt • 30 days (max 90 / year)",
+      "stay_rule": "Belarusian citizens are visa-exempt for 30 days. Total stay cannot exceed 90 days within 1 year from first entry."
+    },
+    {
+      "id": "be",
+      "name": "Belgium",
+      "name_tr": "Belçika",
+      "iso2": "BE",
+      "flag_emoji": "🇧🇪",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Belgian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "bz",
+      "name": "Belize",
+      "name_tr": "Belize",
+      "iso2": "BZ",
+      "flag_emoji": "🇧🇿",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Belizean citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "ae",
+      "name": "United Arab Emirates",
+      "name_tr": "Birleşik Arap Emirlikleri",
+      "iso2": "AE",
+      "flag_emoji": "🇦🇪",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "UAE citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "bo",
+      "name": "Bolivia",
+      "name_tr": "Bolivya",
+      "iso2": "BO",
+      "flag_emoji": "🇧🇴",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Bolivian citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "ba",
+      "name": "Bosnia and Herzegovina",
+      "name_tr": "Bosna Hersek",
+      "iso2": "BA",
+      "flag_emoji": "🇧🇦",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Bosnian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "br",
+      "name": "Brazil",
+      "name_tr": "Brezilya",
+      "iso2": "BR",
+      "flag_emoji": "🇧🇷",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Brazilian ordinary passport holders are visa-exempt for tourism and business for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "bn",
+      "name": "Brunei",
+      "name_tr": "Brunei",
+      "iso2": "BN",
+      "flag_emoji": "🇧🇳",
+      "visa_summary": "Visa exempt • 30 days",
+      "stay_rule": "Bruneian citizens can enter Türkiye visa-free for stays not exceeding 30 days from first entry."
+    },
+    {
+      "id": "bg",
+      "name": "Bulgaria",
+      "name_tr": "Bulgaristan",
+      "iso2": "BG",
+      "flag_emoji": "🇧🇬",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Bulgarian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period. National ID card also accepted.",
+      "ai_extra_context": "National identity cards are accepted for entry."
+    },
+    {
+      "id": "cz",
+      "name": "Czech Republic",
+      "name_tr": "Çek Cumhuriyeti",
+      "iso2": "CZ",
+      "flag_emoji": "🇨🇿",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Czech citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "cn",
+      "name": "China",
+      "name_tr": "Çin Halk Cumhuriyeti",
+      "iso2": "CN",
+      "flag_emoji": "🇨🇳",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "As of 2 January 2026, Chinese ordinary passport holders can enter Türkiye visa-free for up to 90 days within any 180-day period.",
+      "ai_extra_context": "Visa exemption for ordinary Chinese passports started on 2 January 2026."
+    },
+    {
+      "id": "dk",
+      "name": "Denmark",
+      "name_tr": "Danimarka",
+      "iso2": "DK",
+      "flag_emoji": "🇩🇰",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Danish citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ec",
+      "name": "Ecuador",
+      "name_tr": "Ekvator",
+      "iso2": "EC",
+      "flag_emoji": "🇪🇨",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Ecuadorian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "sv",
+      "name": "El Salvador",
+      "name_tr": "El Salvador",
+      "iso2": "SV",
+      "flag_emoji": "🇸🇻",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Salvadoran citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "id",
+      "name": "Indonesia",
+      "name_tr": "Endonezya",
+      "iso2": "ID",
+      "flag_emoji": "🇮🇩",
+      "visa_summary": "Visa exempt • up to 30 days",
+      "stay_rule": "Indonesian ordinary passport holders are visa-exempt for up to 30 days, provided total stay does not exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "ee",
+      "name": "Estonia",
+      "name_tr": "Estonya",
+      "iso2": "EE",
+      "flag_emoji": "🇪🇪",
+      "visa_summary": "Visa exempt • 90 days per entry",
+      "stay_rule": "Estonian ordinary passport holders are visa-exempt for tourism stays not exceeding 90 days per entry."
+    },
+    {
+      "id": "ma",
+      "name": "Morocco",
+      "name_tr": "Fas",
+      "iso2": "MA",
+      "flag_emoji": "🇲🇦",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Moroccan citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "fi",
+      "name": "Finland",
+      "name_tr": "Finlandiya",
+      "iso2": "FI",
+      "flag_emoji": "🇫🇮",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Finnish citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "fr",
+      "name": "France",
+      "name_tr": "Fransa",
+      "iso2": "FR",
+      "flag_emoji": "🇫🇷",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "French citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "gt",
+      "name": "Guatemala",
+      "name_tr": "Guatemala",
+      "iso2": "GT",
+      "flag_emoji": "🇬🇹",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Guatemalan citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ge",
+      "name": "Georgia",
+      "name_tr": "Gürcistan",
+      "iso2": "GE",
+      "flag_emoji": "🇬🇪",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Georgian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "hr",
+      "name": "Croatia",
+      "name_tr": "Hırvatistan",
+      "iso2": "HR",
+      "flag_emoji": "🇭🇷",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Croatian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "nl",
+      "name": "Netherlands",
+      "name_tr": "Hollanda",
+      "iso2": "NL",
+      "flag_emoji": "🇳🇱",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Dutch citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "hn",
+      "name": "Honduras",
+      "name_tr": "Honduras",
+      "iso2": "HN",
+      "flag_emoji": "🇭🇳",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Honduran citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "hk",
+      "name": "Hong Kong (SAR)",
+      "name_tr": "Hong Kong (SAR)",
+      "iso2": "HK",
+      "flag_emoji": "🇭🇰",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Holders of Hong Kong SAR passports can enter Türkiye visa-free for up to 90 days.",
+      "ai_extra_context": "Applies to Hong Kong SAR passports. British National Overseas (BNO) passports are NOT in this visa-exempt list."
+    },
+    {
+      "id": "gb",
+      "name": "United Kingdom",
+      "name_tr": "İngiltere",
+      "iso2": "GB",
+      "flag_emoji": "🇬🇧",
+      "visa_summary": "Visa exempt • tourism",
+      "stay_rule": "UK ordinary passport holders are visa-exempt for tourism. Certain British passport types (British Protected Person, British Subject, British National Overseas) require a visa from a Turkish mission.",
+      "ai_extra_context": "Only standard British citizen ordinary passports are visa-exempt for tourism. BNO/Subject/Protected Person need mission visa."
+    },
+    {
+      "id": "ir",
+      "name": "Iran",
+      "name_tr": "İran",
+      "iso2": "IR",
+      "flag_emoji": "🇮🇷",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Iranian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ie",
+      "name": "Ireland",
+      "name_tr": "İrlanda",
+      "iso2": "IE",
+      "flag_emoji": "🇮🇪",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Irish ordinary passport holders can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "es",
+      "name": "Spain",
+      "name_tr": "İspanya",
+      "iso2": "ES",
+      "flag_emoji": "🇪🇸",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Spanish citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "il",
+      "name": "Israel",
+      "name_tr": "İsrail",
+      "iso2": "IL",
+      "flag_emoji": "🇮🇱",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Israeli citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "se",
+      "name": "Sweden",
+      "name_tr": "İsveç",
+      "iso2": "SE",
+      "flag_emoji": "🇸🇪",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Swedish citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ch",
+      "name": "Switzerland",
+      "name_tr": "İsviçre",
+      "iso2": "CH",
+      "flag_emoji": "🇨🇭",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Swiss citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "it",
+      "name": "Italy",
+      "name_tr": "İtalya",
+      "iso2": "IT",
+      "flag_emoji": "🇮🇹",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Italian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "is",
+      "name": "Iceland",
+      "name_tr": "İzlanda",
+      "iso2": "IS",
+      "flag_emoji": "🇮🇸",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Icelandic citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "jp",
+      "name": "Japan",
+      "name_tr": "Japonya",
+      "iso2": "JP",
+      "flag_emoji": "🇯🇵",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Japanese citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ca",
+      "name": "Canada",
+      "name_tr": "Kanada",
+      "iso2": "CA",
+      "flag_emoji": "🇨🇦",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Canadian citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "me",
+      "name": "Montenegro",
+      "name_tr": "Karadağ",
+      "iso2": "ME",
+      "flag_emoji": "🇲🇪",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Montenegrin citizens can enter Türkiye visa-free for stays of up to 90 days."
+    },
+    {
+      "id": "qa",
+      "name": "Qatar",
+      "name_tr": "Katar",
+      "iso2": "QA",
+      "flag_emoji": "🇶🇦",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Qatari citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "kz",
+      "name": "Kazakhstan",
+      "name_tr": "Kazakistan",
+      "iso2": "KZ",
+      "flag_emoji": "🇰🇿",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Kazakh citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "kg",
+      "name": "Kyrgyzstan",
+      "name_tr": "Kırgızistan",
+      "iso2": "KG",
+      "flag_emoji": "🇰🇬",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Kyrgyz citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "trnc",
+      "name": "Turkish Republic of Northern Cyprus",
+      "name_tr": "KKTC",
+      "iso2": "XT",
+      "flag_emoji": "🇹🇷",
+      "visa_summary": "Visa exempt",
+      "stay_rule": "TRNC passport holders are visa-exempt for entry to Türkiye.",
+      "ai_extra_context": "ISO2 XT is a placeholder (not an official ISO code)."
+    },
+    {
+      "id": "co",
+      "name": "Colombia",
+      "name_tr": "Kolombiya",
+      "iso2": "CO",
+      "flag_emoji": "🇨🇴",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Colombian citizens can enter Türkiye visa-free for stays of up to 90 days."
+    },
+    {
+      "id": "kr",
+      "name": "South Korea",
+      "name_tr": "Kore Cumhuriyeti (Güney)",
+      "iso2": "KR",
+      "flag_emoji": "🇰🇷",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "South Korean citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "xk",
+      "name": "Kosovo",
+      "name_tr": "Kosova",
+      "iso2": "XK",
+      "flag_emoji": "🇽🇰",
+      "visa_summary": "Visa exempt • 90 days / 6 months",
+      "stay_rule": "Kosovar citizens can enter Türkiye visa-free for stays of up to 90 days within 6 months from entry."
+    },
+    {
+      "id": "cr",
+      "name": "Costa Rica",
+      "name_tr": "Kosta Rika",
+      "iso2": "CR",
+      "flag_emoji": "🇨🇷",
+      "visa_summary": "Visa exempt • 30 days",
+      "stay_rule": "Costa Rican citizens can enter Türkiye visa-free for up to 30 days."
+    },
+    {
+      "id": "kw",
+      "name": "Kuwait",
+      "name_tr": "Kuveyt",
+      "iso2": "KW",
+      "flag_emoji": "🇰🇼",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Kuwaiti citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "mk",
+      "name": "North Macedonia",
+      "name_tr": "Kuzey Makedonya",
+      "iso2": "MK",
+      "flag_emoji": "🇲🇰",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "North Macedonian citizens can enter Türkiye visa-free for stays of up to 90 days."
+    },
+    {
+      "id": "lv",
+      "name": "Latvia",
+      "name_tr": "Letonya",
+      "iso2": "LV",
+      "flag_emoji": "🇱🇻",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Latvian citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "li",
+      "name": "Liechtenstein",
+      "name_tr": "Lihtenştayn",
+      "iso2": "LI",
+      "flag_emoji": "🇱🇮",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Liechtenstein citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "lt",
+      "name": "Lithuania",
+      "name_tr": "Litvanya",
+      "iso2": "LT",
+      "flag_emoji": "🇱🇹",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Lithuanian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "lb",
+      "name": "Lebanon",
+      "name_tr": "Lübnan",
+      "iso2": "LB",
+      "flag_emoji": "🇱🇧",
+      "visa_summary": "Visa exempt • 90 days / 6 months",
+      "stay_rule": "Lebanese citizens can enter Türkiye visa-free for tourism/transit for up to 90 days within 6 months from first entry."
+    },
+    {
+      "id": "lu",
+      "name": "Luxembourg",
+      "name_tr": "Lüksemburg",
+      "iso2": "LU",
+      "flag_emoji": "🇱🇺",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Luxembourgish citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "hu",
+      "name": "Hungary",
+      "name_tr": "Macaristan",
+      "iso2": "HU",
+      "flag_emoji": "🇭🇺",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Hungarian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period. National ID card also accepted.",
+      "ai_extra_context": "National identity cards are accepted for entry."
+    },
+    {
+      "id": "mo",
+      "name": "Macao (SAR)",
+      "name_tr": "Makau (ÖİB)",
+      "iso2": "MO",
+      "flag_emoji": "🇲🇴",
+      "visa_summary": "Visa exempt • 30 days",
+      "stay_rule": "Holders of Macao SAR passports can enter Türkiye visa-free for stays of up to 30 days."
+    },
+    {
+      "id": "my",
+      "name": "Malaysia",
+      "name_tr": "Malezya",
+      "iso2": "MY",
+      "flag_emoji": "🇲🇾",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Malaysian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "mt",
+      "name": "Malta",
+      "name_tr": "Malta",
+      "iso2": "MT",
+      "flag_emoji": "🇲🇹",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Maltese citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "md",
+      "name": "Moldova",
+      "name_tr": "Moldova",
+      "iso2": "MD",
+      "flag_emoji": "🇲🇩",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Moldovan citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "mc",
+      "name": "Monaco",
+      "name_tr": "Monako",
+      "iso2": "MC",
+      "flag_emoji": "🇲🇨",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Monégasque citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "mn",
+      "name": "Mongolia",
+      "name_tr": "Moğolistan",
+      "iso2": "MN",
+      "flag_emoji": "🇲🇳",
+      "visa_summary": "Visa exempt • 30 days",
+      "stay_rule": "Mongolian citizens can enter Türkiye visa-free for up to 30 days."
+    },
+    {
+      "id": "ni",
+      "name": "Nicaragua",
+      "name_tr": "Nikaragua",
+      "iso2": "NI",
+      "flag_emoji": "🇳🇮",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Nicaraguan citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "no",
+      "name": "Norway",
+      "name_tr": "Norveç",
+      "iso2": "NO",
+      "flag_emoji": "🇳🇴",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Norwegian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "uz",
+      "name": "Uzbekistan",
+      "name_tr": "Özbekistan",
+      "iso2": "UZ",
+      "flag_emoji": "🇺🇿",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Uzbek ordinary and diplomatic passport holders can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "pa",
+      "name": "Panama",
+      "name_tr": "Panama",
+      "iso2": "PA",
+      "flag_emoji": "🇵🇦",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Panamanian citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "py",
+      "name": "Paraguay",
+      "name_tr": "Paraguay",
+      "iso2": "PY",
+      "flag_emoji": "🇵🇾",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Paraguayan citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "pe",
+      "name": "Peru",
+      "name_tr": "Peru",
+      "iso2": "PE",
+      "flag_emoji": "🇵🇪",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Peruvian citizens can enter Türkiye visa-free for up to 90 days; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "pl",
+      "name": "Poland",
+      "name_tr": "Polonya",
+      "iso2": "PL",
+      "flag_emoji": "🇵🇱",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Polish citizens can enter Türkiye visa-free for up to 90 days within any 180-day period. National ID card also accepted.",
+      "ai_extra_context": "National identity cards are accepted for entry."
+    },
+    {
+      "id": "pt",
+      "name": "Portugal",
+      "name_tr": "Portekiz",
+      "iso2": "PT",
+      "flag_emoji": "🇵🇹",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Portuguese citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "ro",
+      "name": "Romania",
+      "name_tr": "Romanya",
+      "iso2": "RO",
+      "flag_emoji": "🇷🇴",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Romanian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period. National ID card also accepted for tourism.",
+      "ai_extra_context": "National identity cards are accepted for tourism entry."
+    },
+    {
+      "id": "ru",
+      "name": "Russia",
+      "name_tr": "Rusya Federasyonu",
+      "iso2": "RU",
+      "flag_emoji": "🇷🇺",
+      "visa_summary": "Visa exempt • 60 days",
+      "stay_rule": "Russian ordinary passport holders are visa-exempt for tourism and business meetings for stays not exceeding 60 days."
+    },
+    {
+      "id": "sm",
+      "name": "San Marino",
+      "name_tr": "San Marino",
+      "iso2": "SM",
+      "flag_emoji": "🇸🇲",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "San Marino citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "sc",
+      "name": "Seychelles",
+      "name_tr": "Seyşeller",
+      "iso2": "SC",
+      "flag_emoji": "🇸🇨",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Seychellois citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "rs",
+      "name": "Serbia",
+      "name_tr": "Sırbistan",
+      "iso2": "RS",
+      "flag_emoji": "🇷🇸",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Serbian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "sg",
+      "name": "Singapore",
+      "name_tr": "Singapur",
+      "iso2": "SG",
+      "flag_emoji": "🇸🇬",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Singaporean citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "sk",
+      "name": "Slovakia",
+      "name_tr": "Slovakya",
+      "iso2": "SK",
+      "flag_emoji": "🇸🇰",
+      "visa_summary": "Visa exempt • 90 days per entry",
+      "stay_rule": "Slovak citizens are visa-exempt for stays not exceeding 90 days per entry; total stay cannot exceed 90 days within any 180-day period."
+    },
+    {
+      "id": "si",
+      "name": "Slovenia",
+      "name_tr": "Slovenya",
+      "iso2": "SI",
+      "flag_emoji": "🇸🇮",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Slovenian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "sa",
+      "name": "Saudi Arabia",
+      "name_tr": "Suudi Arabistan",
+      "iso2": "SA",
+      "flag_emoji": "🇸🇦",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Saudi citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "cl",
+      "name": "Chile",
+      "name_tr": "Şili",
+      "iso2": "CL",
+      "flag_emoji": "🇨🇱",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Chilean citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "th",
+      "name": "Thailand",
+      "name_tr": "Tayland",
+      "iso2": "TH",
+      "flag_emoji": "🇹🇭",
+      "visa_summary": "Visa exempt • 30 days",
+      "stay_rule": "Thai ordinary passport holders can enter Türkiye visa-free for up to 30 days."
+    },
+    {
+      "id": "tt",
+      "name": "Trinidad and Tobago",
+      "name_tr": "Trinidad-Tobago",
+      "iso2": "TT",
+      "flag_emoji": "🇹🇹",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Trinidad and Tobago citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "tn",
+      "name": "Tunisia",
+      "name_tr": "Tunus",
+      "iso2": "TN",
+      "flag_emoji": "🇹🇳",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Tunisian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ua",
+      "name": "Ukraine",
+      "name_tr": "Ukrayna",
+      "iso2": "UA",
+      "flag_emoji": "🇺🇦",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Ukrainian citizens can enter Türkiye visa-free for up to 90 days within any 180-day period. Biometric ID cards are accepted when traveling from Ukraine to Türkiye.",
+      "ai_extra_context": "Biometric national ID cards accepted for travel from Ukraine to Türkiye."
+    },
+    {
+      "id": "om",
+      "name": "Oman",
+      "name_tr": "Umman",
+      "iso2": "OM",
+      "flag_emoji": "🇴🇲",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Omani citizens can enter Türkiye visa-free for tourism for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "uy",
+      "name": "Uruguay",
+      "name_tr": "Uruguay",
+      "iso2": "UY",
+      "flag_emoji": "🇺🇾",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Uruguayan citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "jo",
+      "name": "Jordan",
+      "name_tr": "Ürdün",
+      "iso2": "JO",
+      "flag_emoji": "🇯🇴",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Jordanian citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "va",
+      "name": "Vatican City",
+      "name_tr": "Vatikan",
+      "iso2": "VA",
+      "flag_emoji": "🇻🇦",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Vatican citizens can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "ve",
+      "name": "Venezuela",
+      "name_tr": "Venezuela",
+      "iso2": "VE",
+      "flag_emoji": "🇻🇪",
+      "visa_summary": "Visa exempt • 90 days",
+      "stay_rule": "Venezuelan ordinary passport holders can enter Türkiye visa-free for up to 90 days."
+    },
+    {
+      "id": "nz",
+      "name": "New Zealand",
+      "name_tr": "Yeni Zelanda",
+      "iso2": "NZ",
+      "flag_emoji": "🇳🇿",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "New Zealand citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    },
+    {
+      "id": "gr",
+      "name": "Greece",
+      "name_tr": "Yunanistan",
+      "iso2": "GR",
+      "flag_emoji": "🇬🇷",
+      "visa_summary": "Visa exempt • 90 days / 180",
+      "stay_rule": "Greek citizens can enter Türkiye visa-free for up to 90 days within any 180-day period."
+    }
+  ]
+}
