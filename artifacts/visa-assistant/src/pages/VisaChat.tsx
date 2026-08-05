@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 
+type CountryCategory = 'visa_exempt' | 'evisa_direct' | 'evisa_conditional' | 'age_special' | 'sticker_mission';
+
 interface Country {
   id: string; name: string; iso2: string; flag_emoji: string;
-  visa_summary: string; category: 'visa_exempt' | 'evisa_direct';
+  visa_summary: string; category: CountryCategory;
 }
 
 interface VisaCardData {
   country: string; iso2: string; flag_emoji: string;
-  category: 'visa_exempt' | 'evisa_direct';
+  category: CountryCategory;
   visa_status: string; insurance_required: boolean;
   headline: string; body: string[];
   features: string[]; price_label: string; price_example: string;
@@ -26,7 +28,7 @@ interface ChatMessage {
 
 function VisaCard({ card }: { card: VisaCardData }) {
   const isEvisa = card.category === 'evisa_direct';
-  const ctaHref = card.cta_href.startsWith('/') ? `/visa${card.cta_href}` : card.cta_href;
+  const ctaHref = card.cta_href;
 
   return (
     <div
@@ -47,14 +49,14 @@ function VisaCard({ card }: { card: VisaCardData }) {
             className="px-2.5 py-1 rounded-full text-[12px] font-semibold"
             style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
           >
-            {card.visa_status || 'e-Visa required'}
+            {card.visa_status || 'e-Permit required'}
           </span>
         ) : (
           <span
             className="px-2.5 py-1 rounded-full text-[12px] font-semibold"
             style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}
           >
-            {card.visa_status || 'Visa exempt'}
+            {card.visa_status || 'Permit-free entry'}
           </span>
         )}
         {card.insurance_required && (
@@ -147,7 +149,7 @@ export default function VisaChat() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    fetch('/api/visa/countries')
+    fetch('/api/travel/countries')
       .then(r => r.json())
       .then(d => setCountries(d.countries ?? []))
       .catch(console.error);
@@ -167,7 +169,7 @@ export default function VisaChat() {
     onCard: (card: VisaCardData) => void,
     onToken: (token: string) => void,
   ): Promise<void> => {
-    const res = await fetch('/api/visa/chat', {
+    const res = await fetch('/api/travel/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
       body: JSON.stringify({ countryId, message, history }),

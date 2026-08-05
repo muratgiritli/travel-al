@@ -12,7 +12,7 @@ interface CardPreview {
   headline: string; body: string[]; admin_html_notes: string;
 }
 
-const ADMIN_API = '/api/visa/admin/countries';
+const ADMIN_API = '/api/travel/admin/countries';
 
 export default function Admin() {
   const [pw, setPw] = useState('');
@@ -147,7 +147,7 @@ export default function Admin() {
           <div className="text-3xl">🕌</div>
           <div>
             <h1 className="font-bold text-xl text-gray-900">Turkey Travel — Admin</h1>
-            <p className="text-[13px] text-gray-500">Manage visa-exempt countries</p>
+            <p className="text-[13px] text-gray-500">Manage permit-exempt countries</p>
           </div>
           <Link href="/" className="ml-auto text-[13px] text-gray-500 hover:text-gray-700">
             ← Back to chat
@@ -194,7 +194,7 @@ export default function Admin() {
             <div className="grid md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Visa summary
+                  Entry summary
                 </label>
                 <input
                   type="text"

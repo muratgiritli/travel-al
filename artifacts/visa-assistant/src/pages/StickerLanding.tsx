@@ -38,7 +38,7 @@ export default function StickerLanding() {
   useEffect(() => {
     if (!slug) return;
     setLoading(true); setNotFound(false);
-    fetch(`/api/visa/countries/${slug}`)
+    fetch(`/api/travel/countries/${slug}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(d => { setCountry(d.country); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });
@@ -60,7 +60,7 @@ export default function StickerLanding() {
   );
 
   const applyHref = `/apply/${country.slug || country.id}`;
-  const missionNote = country.mission_note || country.stay_rule || 'Embassy/consulate sticker visa required.';
+  const missionNote = country.mission_note || country.stay_rule || 'Embassy/consulate sticker permit required.';
 
   return (
     <div className="min-h-screen" style={{ background: '#f8fafc' }}>
@@ -73,7 +73,7 @@ export default function StickerLanding() {
             🕌
           </div>
           <span className="text-white font-bold text-[15px] leading-tight">
-            Turkey<br /><span className="font-normal text-[12px] opacity-80">Visa Office</span>
+            Turkey<br /><span className="font-normal text-[12px] opacity-80">Travel Assistant</span>
           </span>
         </Link>
         <nav className="flex items-center gap-3">
@@ -94,19 +94,19 @@ export default function StickerLanding() {
               {country.flag_emoji} {country.name.toUpperCase()}
             </span>
           </div>
-          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Embassy Sticker Visa</h1>
+          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Embassy Sticker Permit</h1>
           <h2 className="font-semibold text-[17px] text-gray-600 mt-1">for {country.name} Citizens</h2>
         </div>
 
-        {/* ── No e-Visa notice ── */}
+        {/* ── No e-Permit notice ── */}
         <div className="rounded-2xl p-4 mb-5 flex items-start gap-3"
           style={{ background: '#fefce8', border: '1px solid #fde68a' }}>
           <span className="text-2xl shrink-0 mt-0.5">ℹ️</span>
           <div>
-            <p className="font-semibold text-[14px] text-amber-900">No online e-Visa for {country.name} passports</p>
+            <p className="font-semibold text-[14px] text-amber-900">No online e-Permit for {country.name} passports</p>
             <p className="text-[13px] text-amber-800 mt-1">
-              {country.name} ordinary passport holders cannot apply for a Turkish e-Visa online.
-              A sticker visa issued by a Turkish embassy or consulate is required.
+              {country.name} ordinary passport holders cannot apply for a Turkish e-Permit online.
+              A sticker permit issued by a Turkish embassy or consulate is required.
               We can guide you through the full process.
             </p>
           </div>
@@ -119,7 +119,7 @@ export default function StickerLanding() {
           <div className="flex flex-col gap-2">
             {[
               { icon: '🛂', label: 'Passport validity', value: 'Minimum 180 days' },
-              { icon: '📋', label: 'Visa type', value: 'Embassy sticker visa' },
+              { icon: '📋', label: 'Permit type', value: 'Embassy sticker permit' },
               { icon: '📌', label: 'Official note', value: missionNote },
               { icon: '🛡️', label: 'Insurance', value: 'Required', red: true },
             ].map((r, i) => (
@@ -143,7 +143,7 @@ export default function StickerLanding() {
               <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">Recommended</span>
               <span className="text-white font-bold text-[15px]">$20 USD</span>
             </div>
-            <div className="text-white font-bold text-[17px] mt-0.5">Sticker Visa Consultancy Service</div>
+            <div className="text-white font-bold text-[17px] mt-0.5">Sticker Permit Consultancy Service</div>
           </div>
           {/* Card body */}
           <div className="bg-white px-4 pt-4 pb-4">
@@ -177,12 +177,12 @@ export default function StickerLanding() {
               <span className="text-white text-[12px] font-bold tracking-wide uppercase opacity-80">GCC Residents</span>
               <span className="text-white font-bold text-[15px]">$20 USD</span>
             </div>
-            <div className="text-white font-bold text-[16px] mt-0.5">Holiday Visa — GCC Residence</div>
+            <div className="text-white font-bold text-[16px] mt-0.5">Holiday Entry — GCC Residence</div>
           </div>
           <div className="bg-white px-4 pt-3 pb-4">
             <p className="text-[13px] text-gray-600 mb-2">
               If you hold a valid residence permit in the UAE, Saudi Arabia, Qatar, Kuwait, Oman, or Bahrain,
-              you may qualify for a simplified 30-day holiday visa stream.
+              you may qualify for a simplified 30-day holiday entry stream.
             </p>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {['UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain'].map(t => (

@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { db, visaCountryOverridesTable } from "@workspace/db";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Strip any non-ASCII characters (e.g. smart quotes accidentally pasted into the secret)
+const openai = new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() });
 
 const router: IRouter = Router();
 
@@ -303,6 +304,30 @@ function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
   };
 }
 
+// ── User-facing wording sanitizer: "visa" → "permit" terminology ─────────────
+const DEPERMIT_SKIP_KEYS = new Set(["category", "status", "id", "slug", "iso2", "cta_href", "flag_emoji"]);
+
+function depermitText(s: string): string {
+  return s
+    .replace(/(^|[^\p{L}\d])e[- ]?visas/giu, "$1e-Permits")
+    .replace(/(^|[^\p{L}\d])e[- ]?visa/giu, "$1e-Permit")
+    .replace(/\bvisa[- ]free\b/gi, "permit-free")
+    .replace(/\bvisa exempt\b/gi, "Permit-free entry")
+    .replace(/\bvisas\b/gi, (m) => (m[0] === "V" ? "Permits" : "permits"))
+    .replace(/\bvisa\b/gi, (m) => (m[0] === "V" ? "Permit" : "permit"));
+}
+
+function depermitDeep<T>(v: T, key?: string): T {
+  if (typeof v === "string") return (key && DEPERMIT_SKIP_KEYS.has(key) ? v : depermitText(v)) as T;
+  if (Array.isArray(v)) return v.map((x) => depermitDeep(x)) as T;
+  if (v && typeof v === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) out[k] = depermitDeep(val, k);
+    return out as T;
+  }
+  return v;
+}
+
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   const token = (req.headers["x-admin-password"] as string) || (req.query.password as string);
   if (token !== ADMIN_PASSWORD) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -311,7 +336,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 
-router.get("/visa/countries", async (_req, res) => {
+router.get("/travel/countries", async (_req, res) => {
   try {
     const countries = (await loadAll())
       .filter((c) => (c as { is_active?: boolean }).is_active !== false)
@@ -322,25 +347,25 @@ router.get("/visa/countries", async (_req, res) => {
         visa_summary: (c as { visa_summary?: string }).visa_summary,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    res.json({ count: countries.length, countries });
+    res.json(depermitDeep({ count: countries.length, countries }));
   } catch (err) {
     console.error("[visa] GET /visa/countries error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/visa/countries/:id", async (req, res) => {
+router.get("/travel/countries/:id", async (req, res) => {
   try {
     const country = await getCountry(req.params.id);
     if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-    res.json({ country, card: buildCard(country) });
+    res.json(depermitDeep({ country, card: buildCard(country) }));
   } catch (err) {
     console.error("[visa] GET /visa/countries/:id error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.post("/visa/chat", async (req, res) => {
+router.post("/travel/chat", async (req, res) => {
   try {
     const { countryId, message, history } = req.body || {};
     const country = await getCountry(countryId);
@@ -348,7 +373,7 @@ router.post("/visa/chat", async (req, res) => {
       res.status(400).json({ reply_text: "Please select your passport country first.", card: null });
       return;
     }
-    const card = buildCard(country);
+    const card = depermitDeep(buildCard(country));
 
     // Build a grounded system prompt from the country's visa card data
     const c = country as {
@@ -380,7 +405,8 @@ router.post("/visa/chat", async (req, res) => {
       `Answer questions about travelling to Türkiye for ${c.name} passport holders. ` +
       `Base your answers strictly on the following verified data — do not invent rules that are not listed:\n\n` +
       `${factLines}\n\n` +
-      `If asked something outside Türkiye visa or travel topics, politely redirect the user. ` +
+      `If asked something outside Türkiye entry or travel topics, politely redirect the user. ` +
+      `IMPORTANT: never use the word "visa" in your replies — always say "e-Permit", "entry permit", or "travel authorization" instead (e.g. "e-Permit" instead of "e-Visa", "permit-free" instead of "visa-free"). ` +
       `Keep answers concise, factual, and helpful. Use plain text (no markdown headers).`;
 
     // Build conversation history for context
@@ -410,6 +436,17 @@ router.post("/visa/chat", async (req, res) => {
       res.flushHeaders();
 
       let assistantText = "";
+      // Buffer tokens and flush on whitespace boundaries so the "visa"→"permit"
+      // sanitizer never misses a word split across stream chunks.
+      let pendingRaw = "";
+      const flushPending = (all = false): string => {
+        if (all) { const out = depermitText(pendingRaw); pendingRaw = ""; return out; }
+        const idx = pendingRaw.search(/\s\S*$/);
+        if (idx < 0) return "";
+        const safe = pendingRaw.slice(0, idx + 1);
+        pendingRaw = pendingRaw.slice(idx + 1);
+        return depermitText(safe);
+      };
       let clientDisconnected = false;
       let openaiStream: Awaited<ReturnType<typeof openai.chat.completions.create>> & { controller?: AbortController } | null = null;
 
@@ -433,9 +470,17 @@ router.post("/visa/chat", async (req, res) => {
           const token = chunk.choices[0]?.delta?.content ?? "";
           if (token) {
             assistantText += token;
-            const escaped = token.replace(/\n/g, "\\n");
-            res.write(`data: ${escaped}\n\n`);
+            pendingRaw += token;
+            const safe = flushPending();
+            if (safe) {
+              const escaped = safe.replace(/\n/g, "\\n");
+              res.write(`data: ${escaped}\n\n`);
+            }
           }
+        }
+        if (!clientDisconnected) {
+          const rest = flushPending(true);
+          if (rest) res.write(`data: ${rest.replace(/\n/g, "\\n")}\n\n`);
         }
       } catch (err: unknown) {
         const isAbort =
@@ -460,7 +505,7 @@ router.post("/visa/chat", async (req, res) => {
           max_tokens: 1024,
           messages: chatMessages,
         });
-        reply_text = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
+        reply_text = depermitText(completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.");
       } catch (err) {
         console.error("[visa] OpenAI error:", err);
         res.status(502).json({ error: "AI service unavailable. Please try again later." });
@@ -476,7 +521,7 @@ router.post("/visa/chat", async (req, res) => {
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
-router.get("/visa/admin/countries", requireAdmin, async (req, res) => {
+router.get("/travel/admin/countries", requireAdmin, async (req, res) => {
   try {
     const { category } = req.query;
     let countries = (await loadAll()).sort((a, b) => a.name.localeCompare(b.name));
@@ -490,7 +535,7 @@ router.get("/visa/admin/countries", requireAdmin, async (req, res) => {
   }
 });
 
-router.get("/visa/admin/countries/:id", requireAdmin, async (req, res) => {
+router.get("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
   try {
     const country = await getCountry(String(req.params.id));
     if (!country) { res.status(404).json({ error: "Country not found" }); return; }
@@ -501,7 +546,7 @@ router.get("/visa/admin/countries/:id", requireAdmin, async (req, res) => {
   }
 });
 
-router.put("/visa/admin/countries/:id", requireAdmin, async (req, res) => {
+router.put("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
   try {
     const country = await getCountry(String(req.params.id));
     if (!country) { res.status(404).json({ error: "Country not found" }); return; }

@@ -111,7 +111,7 @@ export default function CountryLanding() {
     if (!slug) return;
     setLoading(true);
     setNotFound(false);
-    fetch(`/api/visa/countries/${slug}`)
+    fetch(`/api/travel/countries/${slug}`)
       .then(r => {
         if (!r.ok) throw new Error('not found');
         return r.json();
@@ -140,7 +140,7 @@ export default function CountryLanding() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6" style={{ background: '#f4f6f9' }}>
         <div className="text-5xl">🕌</div>
         <h1 className="font-bold text-xl text-gray-900">Country not found</h1>
-        <p className="text-gray-500 text-[14px]">We couldn't find visa info for "{slug}".</p>
+        <p className="text-gray-500 text-[14px]">We couldn't find travel info for "{slug}".</p>
         <Link href="/" className="px-5 py-2.5 rounded-xl text-white font-semibold text-[14px]" style={{ background: '#0a1f44' }}>
           ← Back to country picker
         </Link>
@@ -169,7 +169,7 @@ export default function CountryLanding() {
           >
             🕌
           </div>
-          <span className="text-white font-bold text-[15px] leading-tight">Turkey<br /><span className="font-normal text-[12px] opacity-80">Visa Office</span></span>
+          <span className="text-white font-bold text-[15px] leading-tight">Turkey<br /><span className="font-normal text-[12px] opacity-80">Travel Assistant</span></span>
         </Link>
         <nav className="flex items-center gap-3">
           <a href="/faq" className="text-white text-[12px] opacity-70 hover:opacity-100">FAQ</a>
@@ -196,10 +196,10 @@ export default function CountryLanding() {
               {country.flag_emoji} {country.name.toUpperCase()}
             </span>
           </div>
-          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Get Your E-Visa</h1>
+          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Get Your e-Permit</h1>
           <h2 className="font-semibold text-[17px] text-gray-600 mt-1">for {country.name} Citizens</h2>
           <p className="text-[13px] text-gray-500 mt-2 max-w-xs mx-auto">
-            {country.precondition || card?.headline || 'Conditional e-Visa — eligibility conditions apply.'}
+            {country.precondition || card?.headline || 'Conditional e-Permit — eligibility conditions apply.'}
           </p>
         </div>
 
@@ -233,7 +233,7 @@ export default function CountryLanding() {
         <OptionCard
           number={1}
           color="#1e3a8a"
-          title="Get a Turkey E-Visa"
+          title="Get a Turkey e-Permit"
           condition="If you have a valid residence permit in any of the following countries:"
           price="$60 USD"
           applyHref={applyHref}
@@ -243,7 +243,7 @@ export default function CountryLanding() {
           </p>
           <TagGrid tags={OPTION1_TAGS} max={24} />
           <p className="text-[12px] text-gray-400 mt-2">
-            e-Visa + travel info delivered by email. Delivery between 60 minutes and 7 days.
+            e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
           </p>
         </OptionCard>
 
@@ -251,17 +251,17 @@ export default function CountryLanding() {
         <OptionCard
           number={2}
           color="#065f46"
-          title="Get a Turkey E-Visa"
-          condition="If you have a valid visa to any of the following countries:"
+          title="Get a Turkey e-Permit"
+          condition="If you hold a valid entry permit for any of the following countries:"
           price="$60 USD"
           applyHref={applyHref}
         >
           <p className="text-[13px] text-gray-600 mb-2">
-            Hold a valid physical visa from the Schengen Area, USA, UK, or Ireland — you may be eligible for an online e-Visa.
+            Hold a valid physical entry permit from the Schengen Area, USA, UK, or Ireland — you may be eligible for an online e-Permit.
           </p>
           <TagGrid tags={OPTION2_TAGS} max={6} />
           <p className="text-[12px] text-gray-400 mt-2">
-            e-Visa + travel info delivered by email. Delivery between 60 minutes and 7 days.
+            e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
           </p>
         </OptionCard>
 
@@ -269,13 +269,13 @@ export default function CountryLanding() {
         <OptionCard
           number={3}
           color="#7c2d12"
-          title="Get a Turkey Visa"
+          title="Get a Turkey Entry Permit"
           condition="If you have a valid residence permit in GCC countries:"
           price="$20 USD"
           applyHref={applyHref}
         >
           <p className="text-[13px] text-gray-600 mb-2">
-            Residents of GCC countries may be eligible for a 30-day holiday visa stream to Türkiye.
+            Residents of GCC countries may be eligible for a 30-day holiday entry stream to Türkiye.
           </p>
           <TagGrid tags={GCC_TAGS} max={8} />
         </OptionCard>
@@ -284,8 +284,8 @@ export default function CountryLanding() {
         <OptionCard
           number={4}
           color="#4c1d95"
-          title="Sticker Visa Consultancy"
-          condition="Embassy sticker visa consultancy service"
+          title="Sticker Permit Consultancy"
+          condition="Embassy sticker permit consultancy service"
           price="$20 USD"
           applyHref={applyHref}
         >

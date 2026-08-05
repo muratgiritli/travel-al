@@ -3,6 +3,7 @@ import { useParams } from 'wouter';
 import CountryLanding from './CountryLanding';
 import AgeLanding from './AgeLanding';
 import StickerLanding from './StickerLanding';
+import ExemptLanding from './ExemptLanding';
 
 /**
  * Thin dispatcher: fetches the country category, then renders
@@ -17,7 +18,7 @@ export default function CountryPage() {
 
   useEffect(() => {
     if (!slug) { setChecking(false); return; }
-    fetch(`/api/visa/countries/${slug}`)
+    fetch(`/api/travel/countries/${slug}`)
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(d => { setCategory(d.country?.category ?? null); setChecking(false); })
       .catch(() => { setCategory(null); setChecking(false); });
@@ -33,5 +34,6 @@ export default function CountryPage() {
 
   if (category === 'age_special') return <AgeLanding />;
   if (category === 'sticker_mission') return <StickerLanding />;
+  if (category === 'visa_exempt') return <ExemptLanding />;
   return <CountryLanding />;
 }

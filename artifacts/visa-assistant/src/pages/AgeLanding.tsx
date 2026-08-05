@@ -74,7 +74,7 @@ function AgeBandCard({ band, applyHref, countryName, isEgypt }: {
   const isDirect = band.status === 'direct_evisa';
 
   const headerColor = isExempt ? '#065f46' : isDirect ? '#1e3a8a' : '#7c2d12';
-  const badgeText = isExempt ? '✅ Visa Exempt' : isDirect ? '🔵 Direct e-Visa' : '⚠️ Conditional e-Visa';
+  const badgeText = isExempt ? '✅ Permit-Free' : isDirect ? '🔵 Direct e-Permit' : '⚠️ Conditional e-Permit';
 
   return (
     <div className="rounded-2xl overflow-hidden mb-4"
@@ -108,7 +108,7 @@ function AgeBandCard({ band, applyHref, countryName, isEgypt }: {
         {isExempt ? (
           <div className="mt-2 text-center text-[12px] text-green-700 font-medium py-2 rounded-xl"
             style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-            No visa application needed — travel freely 🎉
+            No application needed — travel freely 🎉
           </div>
         ) : (
           <ApplyBtn href={applyHref} />
@@ -159,7 +159,7 @@ export default function AgeLanding() {
   useEffect(() => {
     if (!slug) return;
     setLoading(true); setNotFound(false);
-    fetch(`/api/visa/countries/${slug}`)
+    fetch(`/api/travel/countries/${slug}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(d => { setCountry(d.country); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });
@@ -200,7 +200,7 @@ export default function AgeLanding() {
             🕌
           </div>
           <span className="text-white font-bold text-[15px] leading-tight">
-            Turkey<br /><span className="font-normal text-[12px] opacity-80">Visa Office</span>
+            Turkey<br /><span className="font-normal text-[12px] opacity-80">Travel Assistant</span>
           </span>
         </Link>
         <nav className="flex items-center gap-3">
@@ -221,7 +221,7 @@ export default function AgeLanding() {
               {country.flag_emoji} {country.name.toUpperCase()}
             </span>
           </div>
-          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Get Your E-Visa</h1>
+          <h1 className="font-black text-[28px] text-gray-900 leading-tight">Get Your e-Permit</h1>
           <h2 className="font-semibold text-[17px] text-gray-600 mt-1">for {country.name} Citizens</h2>
           <p className="text-[13px] text-gray-500 mt-2 max-w-xs mx-auto">
             Age-based rules apply — choose your category below.
@@ -266,35 +266,35 @@ export default function AgeLanding() {
           <h3 className="font-bold text-[15px] text-gray-900 mb-3">Additional Pathways</h3>
 
           <OptionCard number={1} color="#1e3a8a"
-            title="Get a Turkey E-Visa"
+            title="Get a Turkey e-Permit"
             condition="If you have a valid residence permit in any of the following countries:"
             price="$60 USD" applyHref={applyHref}>
             <TagGrid tags={OPTION1_TAGS} max={24} />
             <p className="text-[12px] text-gray-400 mt-2">
-              e-Visa + travel info delivered by email. Delivery between 60 minutes and 7 days.
+              e-Permit + travel info delivered by email. Delivery between 60 minutes and 7 days.
             </p>
           </OptionCard>
 
           <OptionCard number={2} color="#065f46"
-            title="Get a Turkey E-Visa"
-            condition="If you have a valid visa to any of the following countries:"
+            title="Get a Turkey e-Permit"
+            condition="If you hold a valid entry permit for any of the following countries:"
             price="$60 USD" applyHref={applyHref}>
             <TagGrid tags={OPTION2_TAGS} max={6} />
             <p className="text-[12px] text-gray-400 mt-2">
-              Valid physical visa from the Schengen Area, USA, UK or Ireland required.
+              Valid physical entry permit from the Schengen Area, USA, UK or Ireland required.
             </p>
           </OptionCard>
 
           <OptionCard number={3} color="#7c2d12"
-            title="Get a Turkey Visa"
+            title="Get a Turkey Entry Permit"
             condition="If you have a valid residence permit in GCC countries:"
             price="$20 USD" applyHref={applyHref}>
             <TagGrid tags={GCC_TAGS} max={8} />
           </OptionCard>
 
           <OptionCard number={4} color="#4c1d95"
-            title="Sticker Visa Consultancy"
-            condition="Embassy sticker visa consultancy service"
+            title="Sticker Permit Consultancy"
+            condition="Embassy sticker permit consultancy service"
             price="$20 USD" applyHref={applyHref}>
             <ul className="flex flex-col gap-1.5 text-[13px] text-gray-600">
               {['Document preparation guidance','Embassy appointment coordination',
