@@ -4,6 +4,9 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { eq } from "drizzle-orm";
 import { db, visaCountryOverridesTable } from "@workspace/db";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const router: IRouter = Router();
 
@@ -339,34 +342,132 @@ router.get("/visa/countries/:id", async (req, res) => {
 
 router.post("/visa/chat", async (req, res) => {
   try {
-    const { countryId, message } = req.body || {};
+    const { countryId, message, history } = req.body || {};
     const country = await getCountry(countryId);
     if (!country) {
       res.status(400).json({ reply_text: "Please select your passport country first.", card: null });
       return;
     }
     const card = buildCard(country);
-    const lower = String(message || "").toLowerCase();
-    const isEvisa = country.category === "evisa_direct";
 
-    let reply_text = isEvisa
-      ? `${country.name} passport holders can obtain a direct e-Visa for Türkiye. Travel insurance is also required for your stay.`
-      : `${country.name} is visa-exempt for Türkiye. Travel health insurance is mandatory for your stay.`;
+    // Build a grounded system prompt from the country's visa card data
+    const c = country as {
+      name: string; category: string; visa_summary?: string; stay_rule?: string;
+      insurance_required?: boolean; headline?: string; features?: string[];
+      price_label?: string; ai_extra_context?: string;
+    };
+    const categoryLabel =
+      c.category === "visa_exempt" ? "visa-exempt"
+      : c.category === "evisa_direct" ? "requires a direct e-Visa"
+      : c.category === "evisa_conditional" ? "may be eligible for a conditional e-Visa"
+      : c.category === "age_special" ? "has age-specific visa rules"
+      : "requires a sticker visa obtained from a Turkish mission";
 
-    if (lower.includes("insurance") || lower.includes("sigorta")) {
-      reply_text = `Yes — travel insurance is required for ${country.name} passport holders entering Türkiye, regardless of visa status.`;
-    } else if (lower.includes("how long") || lower.includes("days") || lower.includes("stay")) {
-      reply_text = `${country.name}: ${card?.visa_status}. ${card?.body[0]}`;
-    } else if (lower.includes("evisa") || lower.includes("e-visa") || lower.includes("apply")) {
-      reply_text = isEvisa
-        ? `You'll need to apply for an e-Visa before travel. Click APPLY NOW to start your application through our secure portal.`
-        : `${country.name} passport holders do not need a visa for Türkiye — you are visa-exempt.`;
+    const factLines = [
+      `Country: ${c.name}`,
+      `Visa category for Türkiye: ${categoryLabel}`,
+      c.visa_summary ? `Visa summary: ${c.visa_summary}` : null,
+      c.stay_rule ? `Stay rule: ${c.stay_rule}` : null,
+      `Travel insurance required: ${c.insurance_required ? "Yes — mandatory" : "Not mandatory"}`,
+      c.headline ? `Headline: ${c.headline}` : null,
+      c.features?.length ? `Key features:\n${c.features.map(f => `  - ${f}`).join("\n")}` : null,
+      c.price_label ? `Pricing: ${c.price_label}` : null,
+      c.ai_extra_context ? `Additional context:\n${c.ai_extra_context}` : null,
+    ].filter(Boolean).join("\n");
+
+    const systemPrompt =
+      `You are a knowledgeable and friendly Türkiye visa assistant. ` +
+      `Answer questions about travelling to Türkiye for ${c.name} passport holders. ` +
+      `Base your answers strictly on the following verified data — do not invent rules that are not listed:\n\n` +
+      `${factLines}\n\n` +
+      `If asked something outside Türkiye visa or travel topics, politely redirect the user. ` +
+      `Keep answers concise, factual, and helpful. Use plain text (no markdown headers).`;
+
+    // Build conversation history for context
+    const priorMessages: OpenAI.Chat.ChatCompletionMessageParam[] = Array.isArray(history)
+      ? history
+          .filter((m: { role?: string; text?: string }) => m.role === "user" || m.role === "assistant" || m.role === "bot")
+          .map((m: { role: string; text: string }) => ({
+            role: (m.role === "bot" ? "assistant" : m.role) as "user" | "assistant",
+            content: m.text,
+          }))
+      : [];
+
+    const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: systemPrompt },
+      ...priorMessages,
+      { role: "user", content: String(message || "") },
+    ];
+
+    const wantsStream = req.headers.accept?.includes("text/event-stream") ?? false;
+
+    if (wantsStream) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      // Send card as first SSE event so the client can render it immediately
+      res.write(`data: [CARD]${JSON.stringify(card)}\n\n`);
+      res.flushHeaders();
+
+      let assistantText = "";
+      let clientDisconnected = false;
+      let openaiStream: Awaited<ReturnType<typeof openai.chat.completions.create>> & { controller?: AbortController } | null = null;
+
+      req.on("close", () => {
+        clientDisconnected = true;
+        if (openaiStream && "controller" in openaiStream && openaiStream.controller) {
+          openaiStream.controller.abort();
+        }
+      });
+
+      try {
+        openaiStream = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_tokens: 1024,
+          messages: chatMessages,
+          stream: true,
+        });
+
+        for await (const chunk of openaiStream) {
+          if (clientDisconnected) break;
+          const token = chunk.choices[0]?.delta?.content ?? "";
+          if (token) {
+            assistantText += token;
+            const escaped = token.replace(/\n/g, "\\n");
+            res.write(`data: ${escaped}\n\n`);
+          }
+        }
+      } catch (err: unknown) {
+        const isAbort =
+          err instanceof Error && (err.name === "AbortError" || err.message?.includes("aborted"));
+        if (!isAbort && !clientDisconnected) {
+          res.write(`data: [ERROR] AI service unavailable. Please try again later.\n\n`);
+        }
+        res.end();
+        return;
+      }
+
+      if (!clientDisconnected) {
+        res.write("data: [DONE]\n\n");
+      }
+      res.end();
     } else {
-      const extra = (country as { ai_extra_context?: string }).ai_extra_context;
-      if (extra) reply_text += `\n\n${extra}`;
+      // Non-streaming JSON fallback
+      let reply_text: string;
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_tokens: 1024,
+          messages: chatMessages,
+        });
+        reply_text = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
+      } catch (err) {
+        console.error("[visa] OpenAI error:", err);
+        res.status(502).json({ error: "AI service unavailable. Please try again later." });
+        return;
+      }
+      res.json({ reply_text, card });
     }
-
-    res.json({ reply_text, card });
   } catch (err) {
     console.error("[visa] POST /visa/chat error:", err);
     res.status(500).json({ error: "Internal server error" });

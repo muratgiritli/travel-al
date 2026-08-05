@@ -159,6 +159,55 @@ export default function VisaChat() {
 
   const addMsg = (msg: ChatMessage) => setMessages(prev => [...prev, msg]);
 
+  /** Send a chat message with SSE streaming. Returns the accumulated text. */
+  const sendStreamingChat = async (
+    countryId: string,
+    message: string,
+    history: ChatMessage[],
+    onCard: (card: VisaCardData) => void,
+    onToken: (token: string) => void,
+  ): Promise<void> => {
+    const res = await fetch('/api/visa/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+      body: JSON.stringify({ countryId, message, history }),
+    });
+
+    if (!res.ok || !res.body) {
+      onToken('Sorry, the AI service is unavailable right now. Please try again.');
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6);
+        if (payload === '[DONE]') return;
+        if (payload.startsWith('[ERROR]')) {
+          onToken(payload.slice(7).trim() || 'An error occurred.');
+          return;
+        }
+        if (payload.startsWith('[CARD]')) {
+          try { onCard(JSON.parse(payload.slice(6))); } catch { /* ignore */ }
+          continue;
+        }
+        // Unescape newlines encoded by the server
+        onToken(payload.replace(/\\n/g, '\n'));
+      }
+    }
+  };
+
   const handleCheck = async () => {
     const country = countries.find(c => c.id === selectedId);
     if (!country) {
@@ -175,21 +224,48 @@ export default function VisaChat() {
       navigate(`/${slug}`);
       return;
     }
+    const userMsg = `I have a ${country.name} passport. Do I need a visa for Turkey?`;
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
     addMsg({ role: 'system', text: 'Passport selected.' });
     addMsg({ role: 'user', text: 'Do I need a visa for Turkey?' });
     setLoading(true);
+
+    // Placeholder bot message for streaming
+    const botIndex = { current: -1 };
+    setMessages(prev => {
+      botIndex.current = prev.length;
+      return [...prev, { role: 'bot' as const, text: '' }];
+    });
+
+    let card: VisaCardData | null = null;
     try {
-      const res = await fetch('/api/visa/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ countryId: selectedId, message: 'Do I need a visa for Turkey?' }),
-      });
-      const data = await res.json();
-      addMsg({ role: 'bot', text: data.reply_text, card: data.card });
+      await sendStreamingChat(
+        selectedId,
+        userMsg,
+        [],
+        (c) => {
+          card = c;
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[botIndex.current] = { ...updated[botIndex.current], card: c };
+            return updated;
+          });
+        },
+        (token) => {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[botIndex.current] = {
+              ...updated[botIndex.current],
+              text: updated[botIndex.current].text + token,
+            };
+            return updated;
+          });
+        },
+      );
       setUnlocked(true);
     } finally {
       setLoading(false);
+      void card; // card captured via callback
     }
   };
 
@@ -197,16 +273,35 @@ export default function VisaChat() {
     const text = inputValue.trim();
     if (!text || !selectedId) return;
     setInputValue('');
+
+    // Snapshot history before adding new user message (for context)
+    const historySnapshot = messages.filter(m => m.role === 'user' || m.role === 'bot');
     addMsg({ role: 'user', text });
     setLoading(true);
+
+    const botIndex = { current: -1 };
+    setMessages(prev => {
+      botIndex.current = prev.length;
+      return [...prev, { role: 'bot' as const, text: '' }];
+    });
+
     try {
-      const res = await fetch('/api/visa/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ countryId: selectedId, message: text }),
-      });
-      const data = await res.json();
-      addMsg({ role: 'bot', text: data.reply_text });
+      await sendStreamingChat(
+        selectedId,
+        text,
+        historySnapshot,
+        () => { /* no card update on follow-up messages */ },
+        (token) => {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[botIndex.current] = {
+              ...updated[botIndex.current],
+              text: updated[botIndex.current].text + token,
+            };
+            return updated;
+          });
+        },
+      );
     } finally {
       setLoading(false);
     }
