@@ -1,0 +1,1 @@
+- [No "visa" wording policy](wording-policy.md) — UI must never show "visa"; brand "Turkey Travel Assistant"; server sanitizer depermitText; API at /api/travel/*.

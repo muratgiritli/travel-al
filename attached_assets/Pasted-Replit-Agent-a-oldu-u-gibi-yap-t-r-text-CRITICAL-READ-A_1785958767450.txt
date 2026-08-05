@@ -1,0 +1,84 @@
+Replit Agent’a **olduğu gibi** yapıştır:
+
+```text
+CRITICAL. READ AND OBEY EXACTLY.
+You are NOT allowed to redesign, reinterpret, “improve”, or do it your own way.
+If you change anything outside this prompt, the task FAILS.
+
+========================================
+LOCKED RULE: COUNTRY SELECTOR POSITION
+========================================
+Country selection MUST be INSIDE THE CHAT, IN THE MIDDLE of the conversation.
+It must NOT be a permanent dropdown at the bottom.
+
+CORRECT FLOW (MANDATORY):
+1) Bot message: "Which country issued your passport?"
+2) Immediately below that message, show an in-chat card titled "My passport"
+   - search box
+   - popular countries
+   - full country list
+3) User selects a country from THAT CARD (center of chat)
+4) Then system chip: "Passport selected."
+5) Then continue the flow for that country
+6) Bottom area is ONLY for message input + send (and later bottom-sheet AI chat)
+7) Bottom area must NEVER be the primary country selector
+
+FORBIDDEN:
+- Country select dropdown fixed in footer/composer as main UX
+- Putting country picker only at the bottom
+- Floating Ask AI covering content
+- Renaming product to "Visa Office" / "Visa Assistant"
+- Using the word "visa" or "e-Visa" in any visible UI text
+- Inventing new layouts
+- Ignoring these rules because you think another UI is better
+
+========================================
+BRAND / COPY (MANDATORY)
+========================================
+- Brand: "Turkey Travel Assistant" ONLY
+- Page title/meta: "Turkey Travel Assistant"
+- NEVER show: Visa, e-Visa, Visa Office, Visa Assistant
+- Replace with: Travel authorization / e-permit / entry permit
+- This is a Travel Assistant site, NOT a Visa Office
+
+========================================
+ASK AI (MANDATORY)
+========================================
+- Ask AI opens a BOTTOM SHEET chat from the bottom
+- Chat scrolls inside the bottom sheet
+- It must sit above bottom nav / safe area
+- Do NOT float Ask AI over the middle of the page covering options
+
+========================================
+CATEGORY LOGIC (DO NOT BREAK)
+========================================
+After country is selected from the in-chat card:
+- exempt countries -> insurance-required card (NOT e-permit options page)
+- direct e-permit countries -> apply options + insurance
+- conditional countries (e.g. Pakistan) -> Schengen/UK/USA condition options
+- age-special (Egypt etc.) -> age pathways
+- sticker/mission -> embassy sticker consultancy page
+
+Opening "/" = chat with country card in the middle.
+NO "/visa" landing.
+
+========================================
+MOBILE
+========================================
+Samsung/iPhone:
+- bottom padding: max(28px, calc(16px + env(safe-area-inset-bottom)))
+- no horizontal overflow
+- country card must be usable in chat center on 360px width
+
+========================================
+ACCEPTANCE (MUST PASS)
+========================================
+1) Screenshot of "/" shows country picker CARD in chat center (not footer dropdown as main selector)
+2) Header shows "Turkey Travel Assistant" with ZERO "visa" text
+3) Ask AI opens from bottom sheet
+4) Pakistan/Germany/Vietnam/Egypt/Nigeria each still open correct category flow
+5) Reply with confirmation: "I did not change anything outside the prompt."
+
+If any instruction conflicts with your preference, OBEY THE PROMPT.
+Do not freestyle.
+```

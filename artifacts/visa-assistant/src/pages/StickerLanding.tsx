@@ -1,5 +1,6 @@
+import AskAIDrawer from '../components/AskAIDrawer';
 import { useState, useEffect } from 'react';
-import { Link, useParams, useLocation } from 'wouter';
+import { Link, useParams } from 'wouter';
 
 interface CountryData {
   id: string; name: string; iso2: string; flag_emoji: string; slug?: string;
@@ -28,7 +29,6 @@ function ApplyBtn({ href, label = 'APPLY NOW' }: { href: string; label?: string 
 
 export default function StickerLanding() {
   const params = useParams<{ countrySlug: string }>();
-  const [, navigate] = useLocation();
   const slug = params.countrySlug;
 
   const [country, setCountry] = useState<CountryData | null>(null);
@@ -220,12 +220,8 @@ export default function StickerLanding() {
         ))}
       </div>
 
-      {/* ── Floating AI Button ── */}
-      <button onClick={() => navigate('/')}
-        className="fixed bottom-16 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-[13px] text-white shadow-lg"
-        style={{ background: 'linear-gradient(135deg, #c5a059, #a07830)' }}>
-        🕌 Ask AI
-      </button>
+      {/* ── AI Chat bottom sheet ── */}
+      <AskAIDrawer countryId={country.id} countryName={country.name} />
     </div>
   );
 }
