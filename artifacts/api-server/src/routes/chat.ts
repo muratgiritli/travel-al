@@ -153,9 +153,9 @@ router.post("/chat/session/:sessionId/messages", async (req, res): Promise<void>
     .where(eq(chatMessagesTable.sessionId, params.data.sessionId))
     .orderBy(asc(chatMessagesTable.createdAt));
 
-  // Cap history at the last 20 messages to control API costs and avoid
-  // exceeding the context window. The system prompt is always included.
-  const MAX_HISTORY_MESSAGES = 20;
+  // Cap history to control API costs and avoid exceeding the context window.
+  // Adjust MAX_HISTORY_MESSAGES env var without a code deploy. Default: 20.
+  const MAX_HISTORY_MESSAGES = parseInt(process.env.MAX_HISTORY_MESSAGES ?? "20", 10);
   const historyTrimmed = history.length > MAX_HISTORY_MESSAGES;
   const cappedHistory = history.slice(-MAX_HISTORY_MESSAGES);
 

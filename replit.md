@@ -11,6 +11,7 @@ A premium AI chat assistant for Turkey travel planning. Users select their passp
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Optional env: `MAX_HISTORY_MESSAGES` (default `20`) — number of past chat messages sent to OpenAI per request; lower to reduce API costs, raise for more context
 
 ## Stack
 
