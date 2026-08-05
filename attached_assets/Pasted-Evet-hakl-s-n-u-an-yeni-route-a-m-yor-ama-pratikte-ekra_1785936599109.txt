@@ -1,0 +1,64 @@
+Evet, haklısın — şu an **yeni route açmıyor** ama pratikte **ekran değiştiriyor**: ülke kartı siliniyor, boş sohbet görünümü geliyor. Bu ChatGPT değil.
+
+### Olması gereken (ChatGPT gibi)
+Aynı scroll alanı, mesajlar alta eklenir, eskiler yukarı kayar:
+
+```text
+Bot: Which country issued your passport?
+[My passport kartı — chat içinde]
+User: 🇵🇰 PK
+Bot: How can I help you?
+(kullanıcı yazar…)
+```
+
+Kart seçildikten sonra **kaybolup “yeni sayfa” hissi vermemeli**; ya history’de disabled kalır ya da kapanır ama sohbet aynı thread’de devam eder.
+
+---
+
+### Replit’e yapıştır
+
+```text
+BUG: After passport country selection, the UI feels like a new page/screen.
+
+What happens now (WRONG):
+- Country picker card ("My passport") is unmounted / removed
+- App swaps from an "onboarding view" to a "chat view"
+- Even if URL stays "/", it feels like opening a new page
+
+CORRECT (ChatGPT-style continuous chat):
+- ONE chat thread only. Never swap screens. Never navigate.
+- Messages only APPEND to the same scrollable message list.
+- Older messages scroll UP. New messages appear at the BOTTOM.
+- Auto-scroll to bottom after each new message.
+
+Exact flow:
+1) Bot message: "Which country issued your passport?"
+2) Country picker card is rendered AS PART OF THE CHAT THREAD under that bot message (not a separate page/state)
+3) User selects a country (chip or list)
+4) APPEND user bubble: flag + code (e.g. 🇵🇰 PK)
+5) Keep the previous bot question visible in history above
+6) Country picker should either:
+   A) stay in history but become disabled/collapsed, OR
+   B) animate closed but remain in the same thread continuity
+   Do NOT replace the whole screen.
+7) APPEND bot message: "How can I help you?"
+8) Unlock composer
+9) Chat scrolls down naturally like ChatGPT
+
+Implementation rules:
+- Single messages array / single chat view component
+- No route change (/chat etc.)
+- No conditional full-page swap like: if (!country) return <CountryScreen/> else return <ChatScreen/>
+- Country picker is a message widget / inline attachment inside the thread
+- After selection, set picker status to "completed" — do not destroy chat history
+- Preserve scroll position behavior: always stick to bottom on new messages
+
+Acceptance test:
+- Select PK
+- User can still scroll UP and see: welcome question (+ picker history if kept)
+- Then see user PK bubble
+- Then see "How can I help you?"
+- No flash/blank screen/new page feeling
+```
+
+Bunu Replit’e ver; düzeltince tekrar kontrol ederim.
