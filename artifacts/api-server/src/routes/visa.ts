@@ -281,6 +281,7 @@ async function getCountry(idOrIso: string) {
       c.id === key ||
       c.iso2.toLowerCase() === key ||
       c.name.toLowerCase() === key ||
+      c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") === key ||
       ((c as RawCountry).slug || "").toLowerCase() === key,
   );
 }

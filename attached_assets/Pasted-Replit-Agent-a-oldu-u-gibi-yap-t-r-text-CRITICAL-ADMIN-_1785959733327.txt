@@ -1,0 +1,169 @@
+Replit Agent’a **olduğu gibi** yapıştır:
+
+```text
+CRITICAL ADMIN BUILD — NO FREESTYLE.
+You will build a FULL editable Admin Panel.
+If you invent features outside this prompt, FAIL.
+If you hardcode prices/text that should be admin-editable, FAIL.
+If you do not give me Admin URL + username + password at the end, FAIL.
+
+========================================
+PRODUCT RULES (LOCKED)
+========================================
+- Brand: Turkey Travel Assistant ONLY
+- NEVER show: visa / e-Visa / Visa Office / Visa Assistant in public UI
+- Use: travel authorization / e-permit / entry permit
+- Opening "/" = chat with country picker CARD in the MIDDLE of chat
+- Ask AI = bottom-sheet chat
+- No evisa.gov.tr redirects
+- Do NOT redesign public UX outside these rules
+
+========================================
+ADMIN REQUIREMENT (MANDATORY)
+========================================
+I must be able to edit EVERYTHING from Admin.
+Nothing important may be hardcoded in frontend.
+
+Create secure Admin with:
+- Admin URL
+- Username
+- Password
+- Session/login protection
+- Save + publish
+- Live preview where relevant
+
+At the END of your response you MUST give me exactly:
+1) Admin URL
+2) Username
+3) Password
+
+========================================
+ADMIN MODULES (BUILD ALL)
+========================================
+
+1) DASHBOARD
+- Totals: countries count by category
+- Quick links to pricing / countries / content
+
+2) COUNTRIES CRUD
+Editable fields per country:
+- name_en, name_tr
+- iso2, flag, slug
+- category:
+  - exempt
+  - epermit_direct
+  - epermit_conditional
+  - age_special
+  - sticker_mission
+- active/inactive
+- stay_rule
+- precondition text
+- age bands ( foregypt/algeria/iraq/libya)
+- airline conditions (egypt)
+- mission_note (sticker countries)
+- admin_html_notes (HTML editor + preview)
+- ai_extra_context
+- insurance_required (bool)
+
+3) COUNTRY PAGE OPTIONS (Option cards)
+For each country, editable option cards:
+- title
+- description
+- condition text
+- eligible countries/tags
+- price
+- currency
+- sort order
+- active/inactive
+- CTA label
+- CTA internal link (/next or /apply/{slug})
+NO external government links.
+
+4) PRICING / FEES (GLOBAL + OVERRIDE) — CRITICAL
+Admin must edit:
+
+A) Insurance pricing
+- daily insurance price
+- min days
+- per traveler pricing
+- example calculation text
+- insurance required default
+
+B) Service fees
+- standard service fee
+- express fee
+- sticker consultancy fee
+- conditional e-permit option fees
+- gulf-support fee
+- currency
+- tax/VAT enable + percent
+
+C) Defaults + country overrides
+- Global defaults
+- Country-level override prices
+If country override exists, use override; else global default.
+
+5) CHAT / COPY SETTINGS
+Editable:
+- welcome bot message
+- passport selected message
+- insurance required message
+- bottom disclaimer
+- FAQ/Track/Contact texts
+- forbidden-word checker warning if "visa" is typed into public copy fields
+
+6) APPLY / NEXT PAGE SETTINGS
+Editable:
+- /next page texts
+- form fields
+- success message
+- whether insurance is forced in checkout flow
+
+7) MEDIA / BRAND
+Editable:
+- logo
+- site name (default Turkey Travel Assistant)
+- favicon
+- footer text
+
+8) PREVIEW
+In admin country edit page:
+- live preview of country card/page
+- live price preview (insurance daily + service fee)
+
+========================================
+DATA / TECHNICAL
+========================================
+- Persist all admin edits in DB or JSON store
+- Public pages MUST read from admin data
+- Seed existing country categories already uploaded
+- Keep mobile safe-area fixes
+- Keep category logic correct:
+  exempt / direct / conditional / age_special / sticker_mission
+
+========================================
+SECURITY
+========================================
+- Protected admin login
+- Default credentials allowed for first setup, but you MUST output them
+- Ability to change password in admin
+
+========================================
+ACCEPTANCE (MUST PASS)
+========================================
+1) I can change daily insurance price in Admin and see it on public page
+2) I can change service fees and option card prices in Admin
+3) I can edit any country text/HTML/AI notes
+4) I can edit chat messages
+5) Public UI has ZERO "visa"/"e-Visa"/"Visa Office"
+6) Country picker remains in chat CENTER
+7) Ask AI remains bottom-sheet
+8) Final message includes:
+   - Admin URL
+   - Username
+   - Password
+
+DO NOT freestyle.
+DO NOT skip pricing admin.
+DO NOT finish without giving Admin URL + username + password.
+```

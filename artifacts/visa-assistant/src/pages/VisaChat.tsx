@@ -161,6 +161,96 @@ function VisaCard({ card }: { card: VisaCardData }) {
   );
 }
 
+// ── In-chat passport picker card ──
+const POPULAR_NAMES = ['Germany', 'United Kingdom', 'United States', 'Pakistan', 'Egypt', 'Vietnam'];
+
+function PassportPickerCard({
+  countries,
+  onSelect,
+  disabled,
+}: {
+  countries: Country[];
+  onSelect: (id: string) => void;
+  disabled: boolean;
+}) {
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const filtered = q ? countries.filter(c => c.name.toLowerCase().includes(q)) : countries;
+  const popular = countries.filter(c => POPULAR_NAMES.includes(c.name)).slice(0, 6);
+
+  return (
+    <div
+      className="mt-2 ml-10 rounded-2xl overflow-hidden"
+      style={{
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 2px 8px rgba(0,0,0,.06)',
+        maxWidth: '88%',
+        opacity: disabled ? 0.6 : 1,
+        pointerEvents: disabled ? 'none' : 'auto',
+      }}
+    >
+      <div className="px-4 pt-3 pb-2 flex items-center gap-2" style={{ borderBottom: '1px solid #f1f5f9' }}>
+        <span className="text-base">🛂</span>
+        <span className="font-bold text-[14px] text-gray-900">My passport</span>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 pt-2.5">
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search country…"
+          aria-label="Search passport country"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-gray-800 bg-gray-50 outline-none"
+        />
+      </div>
+
+      {/* Popular */}
+      {!q && popular.length > 0 && (
+        <div className="px-3 pt-2.5">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Popular</div>
+          <div className="flex flex-wrap gap-1.5">
+            {popular.map(c => (
+              <button
+                key={c.id}
+                onClick={() => onSelect(c.id)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[12px] font-medium text-gray-700 border border-gray-200 bg-gray-50 hover:bg-gray-100"
+              >
+                <span>{c.flag_emoji}</span> {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Full list */}
+      <div className="px-2 py-2.5">
+        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1 px-2">
+          {q ? `Results (${filtered.length})` : 'All countries'}
+        </div>
+        <div className="overflow-y-auto flex flex-col" style={{ maxHeight: 200 }}>
+          {filtered.map(c => (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c.id)}
+              className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-left text-[13px] text-gray-800 hover:bg-gray-50"
+            >
+              <span className="text-base">{c.flag_emoji}</span>
+              <span className="flex-1 min-w-0 truncate">{c.name}</span>
+              <span className="text-gray-300 text-xs">›</span>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-2 py-3 text-[13px] text-gray-400">No country found.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function generateSessionId(): string {
   return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -215,6 +305,7 @@ export default function VisaChat() {
     sessionLabelRef.current = 'New conversation';
     setMessages([{ role: 'bot', text: 'Which country issued your passport?' }]);
     setSelectedId('');
+    selectingRef.current = false;
     setUnlocked(false);
     setInputValue('');
     setShowHistory(false);
@@ -290,19 +381,23 @@ export default function VisaChat() {
     }
   };
 
-  const handleCheck = async () => {
-    const country = countries.find(c => c.id === selectedId);
-    if (!country) {
-      addMsg({ role: 'bot', text: 'Please select your passport country first.' });
-      return;
-    }
+  const selectingRef = useRef(false);
+  const handleSelectCountry = async (countryId: string) => {
+    // Re-entrancy guard: ignore rapid double-taps before state re-renders
+    if (selectingRef.current || selectedId || loading) return;
+    const country = countries.find(c => c.id === countryId);
+    if (!country) return;
+    selectingRef.current = true;
+    setSelectedId(countryId);
     // Non-exempt categories → open full landing page
     if (
       country.category === 'evisa_conditional' ||
       country.category === 'age_special' ||
       country.category === 'sticker_mission'
     ) {
-      const slug = (country as { slug?: string }).slug || country.id;
+      const slug =
+        (country as { slug?: string }).slug ||
+        country.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       navigate(`/${slug}`);
       return;
     }
@@ -310,10 +405,11 @@ export default function VisaChat() {
     // Label this session by the country
     sessionLabelRef.current = `${country.flag_emoji} ${country.name}`;
 
-    const userMsg = `I have a ${country.name} passport. Do I need a visa for Turkey?`;
+    const userMsg = `I have a ${country.name} passport. What do I need to enter Turkey?`;
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
     addMsg({ role: 'system', text: 'Passport selected.' });
-    addMsg({ role: 'user', text: 'Do I need a visa for Turkey?' });
+    addMsg({ role: 'user', text: 'What do I need to enter Turkey?' });
+    setUnlocked(true);
     setLoading(true);
 
     // Placeholder bot message for streaming
@@ -326,7 +422,7 @@ export default function VisaChat() {
     let card: VisaCardData | null = null;
     try {
       await sendStreamingChat(
-        selectedId,
+        countryId,
         userMsg,
         [],
         (c) => {
@@ -348,7 +444,6 @@ export default function VisaChat() {
           });
         },
       );
-      setUnlocked(true);
     } finally {
       setLoading(false);
       void card;
@@ -519,6 +614,15 @@ export default function VisaChat() {
                 </div>
               )}
               {msg.card && <VisaCard card={msg.card} />}
+              {/* In-chat passport picker: shown under the opening bot question */}
+              {i === 0 && msg.role === 'bot' && (
+                <PassportPickerCard
+                  key={sessionIdRef.current}
+                  countries={countries}
+                  onSelect={handleSelectCountry}
+                  disabled={!!selectedId || loading}
+                />
+              )}
             </div>
           ))}
 
@@ -551,35 +655,11 @@ export default function VisaChat() {
             paddingBottom: 'max(28px, calc(16px + env(safe-area-inset-bottom)))',
           }}
         >
-          {/* Country selector */}
-          <div className="flex gap-2" style={{ minWidth: 0 }}>
-            <select
-              value={selectedId}
-              onChange={e => setSelectedId(e.target.value)}
-              className="flex-1 min-w-0 border border-gray-300 rounded-xl px-3 py-2.5 text-[13px] text-gray-700 bg-white outline-none"
-              aria-label="Select passport country"
-            >
-              <option value="">Select your passport country…</option>
-              {countries.map(c => (
-                <option key={c.id} value={c.id}>{c.flag_emoji} {c.name}</option>
-              ))}
-            </select>
-            <button
-              onClick={handleCheck}
-              disabled={!selectedId || loading}
-              className="px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors shrink-0 disabled:opacity-50"
-              style={{ background: '#0a1f44' }}
-            >
-              Check
-            </button>
-          </div>
-
-          {/* Message input — appears after first check */}
-          {unlocked && (
-            <div className="flex gap-2">
+          {/* Message input only — country is selected via the in-chat card */}
+          <div className="flex gap-2">
               <div
                 className="flex-1 flex items-center gap-2 border border-gray-200 rounded-2xl px-3 py-1.5"
-                style={{ background: '#f9fafb' }}
+                style={{ background: '#f9fafb', opacity: unlocked ? 1 : 0.6 }}
               >
                 <input
                   id="messageInput"
@@ -587,13 +667,14 @@ export default function VisaChat() {
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
-                  placeholder="Ask about insurance, stay length, documents…"
+                  disabled={!unlocked}
+                  placeholder={unlocked ? 'Ask about insurance, stay length, documents…' : 'Select your passport country above first…'}
                   className="flex-1 bg-transparent outline-none text-[14px] text-gray-800 placeholder:text-gray-400"
                 />
               </div>
               <button
                 onClick={handleSend}
-                disabled={!inputValue.trim() || loading}
+                disabled={!unlocked || !inputValue.trim() || loading}
                 className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm shrink-0 disabled:opacity-40"
                 style={{ background: '#0a1f44' }}
                 aria-label="Send"
@@ -601,7 +682,6 @@ export default function VisaChat() {
                 ➤
               </button>
             </div>
-          )}
 
           <div className="text-center text-[11px] text-gray-400">
             AI guidance • Human travel experts available.
