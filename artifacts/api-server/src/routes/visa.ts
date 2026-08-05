@@ -5,66 +5,55 @@ import { dirname, join } from "path";
 
 const router: IRouter = Router();
 
-// Resolve data directory relative to this compiled file (dist/routes/visa.js → dist/ → data/visa/)
-const __dirname_compat = dirname(fileURLToPath(import.meta.url));
 // dist/index.mjs → dist/ → artifacts/api-server/ → data/visa/
+const __dirname_compat = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname_compat, "..", "data", "visa");
-const SEED_PATH = join(DATA_DIR, "visa-exempt-countries.json");
+const EXEMPT_PATH  = join(DATA_DIR, "visa-exempt-countries.json");
+const EVISA_PATH   = join(DATA_DIR, "evisa-direct-countries.json");
 const OVERRIDES_PATH = join(DATA_DIR, "country-overrides.json");
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
-function readJson<T>(file: string, fallback: T): T {
-  try { return JSON.parse(readFileSync(file, "utf8")); }
-  catch { return fallback; }
-}
-
-function writeJson(file: string, data: unknown): void {
-  writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
-}
-
-interface SeedCountry {
+interface RawCountry {
   id: string; name: string; name_tr?: string; iso2: string; flag_emoji: string;
   visa_summary?: string; stay_rule?: string; insurance_required?: boolean;
   admin_html_notes?: string; ai_extra_context?: string; is_active?: boolean;
+  headline?: string; features?: string[];
+  price_label?: string; price_example?: string; cta?: string; cta_href?: string;
 }
-
-interface SeedFile {
-  defaults: Record<string, unknown>;
-  countries: SeedCountry[];
-}
-
-interface CountryOverride {
+interface ExemptFile  { defaults: Record<string, unknown>; countries: RawCountry[]; }
+interface EvisaFile   { countries?: RawCountry[]; [k: string]: unknown; }
+interface Override     {
   visa_summary?: string; stay_rule?: string; insurance_required?: boolean;
   admin_html_notes?: string; ai_extra_context?: string; is_active?: boolean;
 }
 
-function loadCountries() {
-  const seed = readJson<SeedFile>(SEED_PATH, { defaults: {}, countries: [] });
-  const overrides = readJson<Record<string, CountryOverride>>(OVERRIDES_PATH, {});
-  const defaults = seed.defaults || {};
-  return (seed.countries || []).map((c) => {
-    const o: CountryOverride = overrides[c.id] || {};
-    return {
-      ...defaults, ...c, ...o,
-      category: "visa_exempt",
-      insurance_required: o.insurance_required ?? c.insurance_required ?? true,
-      admin_html_notes: o.admin_html_notes ?? c.admin_html_notes ?? "",
-      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
-      is_active: o.is_active ?? c.is_active ?? true,
-    };
-  });
-}
+// ── Defaults ─────────────────────────────────────────────────────────────────
 
-function getCountry(idOrIso: string) {
-  const key = String(idOrIso || "").toLowerCase();
-  return loadCountries().find(
-    (c) => c.id === key || c.iso2.toLowerCase() === key || c.name.toLowerCase() === key,
-  );
-}
+const EVISA_DEFAULTS: Partial<RawCountry> = {
+  insurance_required: true,
+  headline: "You need an e-Visa + mandatory travel insurance for Türkiye",
+  features: [
+    "🔵 e-Visa required for entry",
+    "🛡️ Travel insurance mandatory for your stay",
+    "✅ Fast approval — typically within 24 hours",
+  ],
+  price_label: "from €14.99",
+  price_example: "14-day single-entry e-Visa + insurance",
+  cta: "APPLY NOW",
+  cta_href: "/next",
+};
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function readJson<T>(file: string, fallback: T): T {
+  try { return JSON.parse(readFileSync(file, "utf8")); } catch { return fallback; }
+}
+function writeJson(file: string, data: unknown): void {
+  writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
+}
 function sanitize(html: string): string {
   return String(html || "")
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -73,28 +62,73 @@ function sanitize(html: string): string {
     .replace(/javascript:/gi, "");
 }
 
+function loadAll() {
+  const exemptFile  = readJson<ExemptFile>(EXEMPT_PATH, { defaults: {}, countries: [] });
+  const evisaFile   = readJson<EvisaFile>(EVISA_PATH,  { countries: [] });
+  const overrides   = readJson<Record<string, Override>>(OVERRIDES_PATH, {});
+  const exemptDefs  = exemptFile.defaults || {};
+
+  const exempt = (exemptFile.countries || []).map((c) => {
+    const o = overrides[c.id] || {};
+    return {
+      ...exemptDefs, ...c, ...o,
+      category: "visa_exempt" as const,
+      insurance_required: o.insurance_required ?? c.insurance_required ?? true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
+      is_active: o.is_active ?? c.is_active ?? true,
+      cta: (c as RawCountry).cta ?? (exemptDefs as RawCountry).cta ?? "Get travel insurance",
+      cta_href: "/checkout",
+    };
+  });
+
+  const evisaRaw = Array.isArray(evisaFile) ? evisaFile : evisaFile.countries || [];
+  const evisa = (evisaRaw as RawCountry[]).map((c) => {
+    const o = overrides[c.id] || {};
+    return {
+      ...EVISA_DEFAULTS, ...c, ...o,
+      category: "evisa_direct" as const,
+      insurance_required: o.insurance_required ?? c.insurance_required ?? true,
+      admin_html_notes: sanitize(o.admin_html_notes ?? c.admin_html_notes ?? ""),
+      ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
+      is_active: o.is_active ?? c.is_active ?? true,
+      cta: "APPLY NOW",
+      cta_href: "/next",
+    };
+  });
+
+  return [...exempt, ...evisa];
+}
+
+function getCountry(idOrIso: string) {
+  const key = String(idOrIso || "").toLowerCase();
+  return loadAll().find(
+    (c) => c.id === key || c.iso2.toLowerCase() === key || c.name.toLowerCase() === key,
+  );
+}
+
 function buildCard(country: ReturnType<typeof getCountry>) {
   if (!country) return null;
-  const seed = readJson<SeedFile>(SEED_PATH, { defaults: {}, countries: [] });
-  const defaults = seed.defaults as Record<string, unknown>;
   return {
     country: country.name,
-    name_tr: country.name_tr,
+    name_tr: (country as { name_tr?: string }).name_tr,
     iso2: country.iso2,
     flag_emoji: country.flag_emoji,
-    visa_status: country.visa_summary || (defaults.visa_summary as string),
-    insurance_required: !!country.insurance_required,
-    headline: (country as { headline?: string }).headline || (defaults.headline as string),
+    category: country.category,
+    visa_status: (country as { visa_summary?: string }).visa_summary || "",
+    insurance_required: !!(country as { insurance_required?: boolean }).insurance_required,
+    headline: (country as { headline?: string }).headline || "",
     body: [
-      country.stay_rule || (defaults.stay_rule as string),
-      "However, travel insurance covering the full length of your stay is mandatory.",
+      (country as { stay_rule?: string }).stay_rule || "",
+      "Travel health insurance is mandatory for the full duration of your stay.",
     ],
-    features: (country as { features?: string[] }).features || (defaults.features as string[]),
-    price_label: (country as { price_label?: string }).price_label || (defaults.price_label as string),
-    price_example: (country as { price_example?: string }).price_example || (defaults.price_example as string),
-    cta: (country as { cta?: string }).cta || (defaults.cta as string),
-    admin_html_notes: sanitize(country.admin_html_notes || ""),
-    ai_extra_context: country.ai_extra_context || "",
+    features: (country as { features?: string[] }).features || [],
+    price_label: (country as { price_label?: string }).price_label || "",
+    price_example: (country as { price_example?: string }).price_example || "",
+    cta: (country as { cta?: string }).cta || "Continue",
+    cta_href: (country as { cta_href?: string }).cta_href || "/checkout",
+    admin_html_notes: (country as { admin_html_notes?: string }).admin_html_notes || "",
+    ai_extra_context: (country as { ai_extra_context?: string }).ai_extra_context || "",
   };
 }
 
@@ -104,14 +138,16 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   next();
 }
 
-// ── Public routes ────────────────────────────────────────────────────────────
+// ── Public routes ─────────────────────────────────────────────────────────────
 
 router.get("/visa/countries", (_req, res) => {
-  const countries = loadCountries()
-    .filter((c) => c.is_active)
+  const countries = loadAll()
+    .filter((c) => (c as { is_active?: boolean }).is_active !== false)
     .map((c) => ({
-      id: c.id, name: c.name, name_tr: c.name_tr,
-      iso2: c.iso2, flag_emoji: c.flag_emoji, visa_summary: c.visa_summary,
+      id: c.id, name: c.name, name_tr: (c as { name_tr?: string }).name_tr,
+      iso2: c.iso2, flag_emoji: c.flag_emoji,
+      category: c.category,
+      visa_summary: (c as { visa_summary?: string }).visa_summary,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
   res.json({ count: countries.length, countries });
@@ -132,21 +168,37 @@ router.post("/visa/chat", (req, res) => {
   }
   const card = buildCard(country);
   const lower = String(message || "").toLowerCase();
-  let reply_text = `${country.name} is visa-exempt for Türkiye. But travel health insurance is mandatory for your stay.`;
+  const isEvisa = country.category === "evisa_direct";
+
+  let reply_text = isEvisa
+    ? `${country.name} passport holders can obtain a direct e-Visa for Türkiye. Travel insurance is also required for your stay.`
+    : `${country.name} is visa-exempt for Türkiye. Travel health insurance is mandatory for your stay.`;
+
   if (lower.includes("insurance") || lower.includes("sigorta")) {
-    reply_text = `Yes — travel insurance is required for ${country.name} passport holders entering Türkiye, even though you are visa-exempt.`;
-  } else if (lower.includes("how long") || lower.includes("days")) {
+    reply_text = `Yes — travel insurance is required for ${country.name} passport holders entering Türkiye, regardless of visa status.`;
+  } else if (lower.includes("how long") || lower.includes("days") || lower.includes("stay")) {
     reply_text = `${country.name}: ${card?.visa_status}. ${card?.body[0]}`;
-  } else if (country.ai_extra_context) {
-    reply_text = `${reply_text}\n\nNote: ${country.ai_extra_context}`;
+  } else if (lower.includes("evisa") || lower.includes("e-visa") || lower.includes("apply")) {
+    reply_text = isEvisa
+      ? `You'll need to apply for an e-Visa before travel. Click APPLY NOW to start your application through our secure portal.`
+      : `${country.name} passport holders do not need a visa for Türkiye — you are visa-exempt.`;
+  } else {
+    const extra = (country as { ai_extra_context?: string }).ai_extra_context;
+    if (extra) reply_text += `\n\n${extra}`;
   }
+
   res.json({ reply_text, card });
 });
 
-// ── Admin routes ─────────────────────────────────────────────────────────────
+// ── Admin routes ──────────────────────────────────────────────────────────────
 
-router.get("/visa/admin/countries", requireAdmin, (_req, res) => {
-  res.json({ countries: loadCountries().sort((a, b) => a.name.localeCompare(b.name)) });
+router.get("/visa/admin/countries", requireAdmin, (req, res) => {
+  const { category } = req.query;
+  let countries = loadAll().sort((a, b) => a.name.localeCompare(b.name));
+  if (category === "visa_exempt" || category === "evisa_direct") {
+    countries = countries.filter((c) => c.category === category);
+  }
+  res.json({ countries });
 });
 
 router.get("/visa/admin/countries/:id", requireAdmin, (req, res) => {
@@ -158,17 +210,16 @@ router.get("/visa/admin/countries/:id", requireAdmin, (req, res) => {
 router.put("/visa/admin/countries/:id", requireAdmin, (req, res) => {
   const country = getCountry(req.params.id);
   if (!country) { res.status(404).json({ error: "Country not found" }); return; }
-  const overrides = readJson<Record<string, CountryOverride>>(OVERRIDES_PATH, {});
+  const overrides = readJson<Record<string, Override>>(OVERRIDES_PATH, {});
   const prev = overrides[country.id] || {};
   const body = req.body || {};
   overrides[country.id] = {
     ...prev,
-    visa_summary: body.visa_summary ?? prev.visa_summary ?? country.visa_summary,
-    stay_rule: body.stay_rule ?? prev.stay_rule ?? country.stay_rule,
-    insurance_required: body.insurance_required ?? prev.insurance_required ?? country.insurance_required,
-    admin_html_notes: body.admin_html_notes ?? prev.admin_html_notes ?? "",
-    ai_extra_context: body.ai_extra_context ?? prev.ai_extra_context ?? "",
-    is_active: body.is_active ?? prev.is_active ?? true,
+    visa_summary:      body.visa_summary      ?? prev.visa_summary,
+    stay_rule:         body.stay_rule          ?? prev.stay_rule,
+    insurance_required: body.insurance_required ?? prev.insurance_required,
+    admin_html_notes:  body.admin_html_notes   ?? prev.admin_html_notes ?? "",
+    ai_extra_context:  body.ai_extra_context   ?? prev.ai_extra_context ?? "",
   };
   writeJson(OVERRIDES_PATH, overrides);
   const updated = getCountry(country.id);
