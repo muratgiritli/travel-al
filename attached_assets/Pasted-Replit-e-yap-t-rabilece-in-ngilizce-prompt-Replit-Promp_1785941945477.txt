@@ -1,0 +1,174 @@
+Replit’e yapıştırabileceğin İngilizce prompt:
+
+---
+
+**Replit Prompt**
+
+Build a production-ready web app called **Turkey Travel Assistant**.
+
+### Goal
+When a visitor selects a **visa-exempt** country (one of 97 countries), show a **chat-style UI** that looks exactly like a modern mobile travel chatbot. The AI answer must appear as a rich in-chat card (not a poster). Country name must always be dynamic.
+
+Start with **Category 1 only: Visa Exempt (97 countries)**.
+
+---
+
+### Core UX (must match this UI style)
+Create a responsive chat interface (mobile-first + desktop) with:
+
+**Header**
+- Gold circular logo (mosque + crescent)
+- Title: `Turkey Travel Assistant`
+- Green status: `Online`
+- Language dropdown: `EN`
+- Menu (three dots)
+
+**Chat flow**
+1. Bot: `Welcome. I can check visa rules for Türkiye. Which passport do you hold?`
+2. User selects/types a country (example: Germany)
+3. Center system chip: `Passport selected.`
+4. User: `Do I need a visa for Turkey?`
+5. Bot short text:  
+   `{Country} is visa-exempt for Türkiye. But travel health insurance is mandatory for your stay.`
+6. Then render a rich card inside the chat.
+
+**Rich card (exact structure)**
+- Flags row: `{Country flag} {Country}` → `🇹🇷 Türkiye`
+- Green pill: `Visa exempt • 90 days / 180`
+- Orange pill: `Insurance required`
+- Headline: `Travel insurance is required for your stay`
+- Body (dynamic):
+  - `{Country} citizens can enter Türkiye visa-free for up to 90 days within any 180-day period.`
+  - `However, travel insurance covering the full length of your stay is mandatory.`
+- Feature list:
+  - Shield: `Turkish Law compliant`
+  - Document: `Instant digital PDF policy`
+  - Check: `Coverage for full stay length`
+- Pricing box:
+  - `Standard Plan • $5 / day`
+  - `Example: 10 days × 1 traveler = $50`
+- Primary CTA button (navy): `Get travel insurance`
+- Secondary link: `Ask a question`
+- Footer: `Instant PDF • Border-ready • Cancel anytime`
+
+**Bottom bar**
+- Input: `Message Turkey Travel Assistant...`
+- Paperclip + mic + navy send button
+- Footer: `AI guidance • Human travel experts available.`
+
+Design tokens:
+- Navy: `#0A1F44`
+- Gold: `#C5A059`
+- Green badge bg `#E6F4EA`, text dark green
+- Orange badge bg `#FFF4E5`, text dark orange
+- Clean sans-serif, rounded cards, soft borders, no clutter
+- Must look excellent on iPhone width and desktop centered chat window
+
+---
+
+### Data model
+Create a `countries` table/collection for visa-exempt countries:
+
+Fields:
+- `id`
+- `name` (string)
+- `iso2` (e.g. DE)
+- `flag_emoji`
+- `category` = `visa_exempt`
+- `visa_summary` (default: `Visa exempt • 90 days / 180`)
+- `stay_rule` (default text for 90/180)
+- `insurance_required` (boolean, default true)
+- `admin_html_notes` (HTML, nullable) ← admin editable rich content
+- `ai_extra_context` (text/HTML, nullable) ← extra facts for AI
+- `is_active` (boolean)
+- `updated_at`
+
+Seed all **97 visa-exempt countries** (Argentina, Germany, USA, France, UK, Italy, Spain, Netherlands, Canada, Japan, South Korea, Georgia, Azerbaijan, Qatar, UAE, Saudi Arabia, China, Russia, etc.). Use a JSON seed file.
+
+Country name must always be injected dynamically everywhere:
+- chat bubbles
+- card title
+- AI response text
+- admin preview
+
+---
+
+### Admin panel (`/admin`)
+Simple secure admin (password or basic auth for now):
+
+1. **Countries list**
+   - Search/filter by name
+   - Only show `visa_exempt` first
+2. **Country edit page**
+   - Editable fields: name, ISO, flag, visa summary, stay rule, insurance required
+   - **HTML editor** for `admin_html_notes` (rich text / HTML textarea with live preview)
+   - **AI context editor** (`ai_extra_context`) where I can write extra country-specific notes for the AI
+   - Save button
+3. Preview panel:
+   - Live preview of the chat card with that country selected
+
+Important: If `admin_html_notes` exists, show it under the main insurance card (sanitized HTML). AI must also use this content when answering.
+
+---
+
+### AI response behavior
+Add an AI endpoint (OpenAI-compatible) for chat replies.
+
+System rules for visa-exempt countries:
+- Always confirm visa-exempt status
+- Always say travel insurance is mandatory in Türkiye
+- Always keep tone helpful and official
+- Always return structured JSON so frontend can render:
+```json
+{
+  "reply_text": "...",
+  "card": {
+    "country": "Germany",
+    "iso2": "DE",
+    "visa_status": "Visa exempt • 90 days / 180",
+    "insurance_required": true,
+    "headline": "Travel insurance is required for your stay",
+    "body": ["...", "..."],
+    "features": ["Turkish Law compliant", "Instant digital PDF policy", "Coverage for full stay length"],
+    "price_label": "Standard Plan • $5 / day",
+    "price_example": "Example: 10 days × 1 traveler = $50",
+    "cta": "Get travel insurance",
+    "admin_html_notes": "<p>...</p>"
+  }
+}
+```
+- Never invent visa requirements conflicting with category
+- Use admin HTML/notes if present
+- English UI first
+
+If user asks questions after the card, answer in chat bubbles, keep insurance CTA available.
+
+---
+
+### Frontend pages
+1. `/` — public chat assistant
+2. `/admin` — country management + HTML notes
+3. Optional `/api/countries` and `/api/chat`
+
+Tech suggestion (use best for Replit):
+- Next.js or React + Node/Express
+- SQLite or PostgreSQL
+- Tailwind CSS
+- Sanitize HTML with DOMPurify (or equivalent)
+
+---
+
+### Acceptance criteria
+- Selecting any visa-exempt country shows the chat flow + card like the provided UI
+- Country name/flag always dynamic
+- Admin can edit HTML notes per country and AI uses them
+- Mobile and desktop look polished
+- CTA button works (link to `/checkout` placeholder for now)
+- Seed 97 visa-exempt countries
+- Code is clean, commented, and runnable on Replit with one click
+
+Do not build other visa categories yet. Only **Visa Exempt**.
+
+---
+
+İstersen bir sonraki adımda 97 ülkenin JSON seed listesini de (ISO + flag) hazırlayıp promptun altına ekleyebilirim.
