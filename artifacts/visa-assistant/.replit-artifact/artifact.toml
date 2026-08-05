@@ -1,14 +1,14 @@
 kind = "web"
-previewPath = "/visa/"
+previewPath = "/"
 title = "Visa Assistant"
-description = "Turkey Travel Visa Assistant — chat UI for 97 visa-exempt countries with rich insurance card and country-level admin panel."
+description = "Turkey Travel Visa Assistant — country passport picker with visa/e-Visa cards and admin panel."
 version = "1.0.0"
 id = "artifacts/visa-assistant"
 router = "path"
 
 [[services]]
 name = "web"
-paths = [ "/visa/" ]
+paths = [ "/", "/visa/" ]
 localPort = 21735
 
 [services.development]
@@ -25,4 +25,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "21735"
-BASE_PATH = "/visa/"
+BASE_PATH = "/"

@@ -138,7 +138,7 @@ export default function VisaChat() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'bot', text: 'Welcome. I can check visa rules for Türkiye. Which passport do you hold?' },
+    { role: 'bot', text: 'Which country issued your passport?' },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [unlocked, setUnlocked] = useState(false);
