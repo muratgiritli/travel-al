@@ -265,7 +265,7 @@ export default function CountryEditor({
             </p>
             <div className="grid md:grid-cols-2 gap-4">
               <Field label="Badge country label" value={form.badge_country_label} onChange={(v) => set('badge_country_label', v)} placeholder={form.name.toUpperCase()} checkForbidden />
-              <Field label="Title" value={form.top_title} onChange={(v) => set('top_title', v)} placeholder="Get Your Travel Authorization" checkForbidden />
+              <Field label="Title" value={form.top_title} onChange={(v) => set('top_title', v)} placeholder="Get Your Travel E-Visa" />
               <Field label="Subtitle" value={form.top_subtitle} onChange={(v) => set('top_subtitle', v)} placeholder={`for ${form.name} Citizens`} checkForbidden />
               <Field label="Support line" value={form.support_line} onChange={(v) => set('support_line', v)} placeholder="(category default)" checkForbidden />
               <Field label="Requirements title (no year)" value={form.requirements_title} onChange={(v) => set('requirements_title', v)} placeholder="Travel Requirements for Turkey:" checkForbidden />
@@ -380,7 +380,7 @@ export default function CountryEditor({
                 </span>
               </div>
               <div className="text-center mb-4">
-                <div className="font-black text-[19px] text-gray-900 leading-tight">{form.top_title || 'Get Your Travel Authorization'}</div>
+                <div className="font-black text-[19px] text-gray-900 leading-tight">{form.top_title || 'Get Your Travel E-Visa'}</div>
                 <div className="font-semibold text-[14px] text-gray-700 mt-0.5">{form.top_subtitle || `for ${form.name} Citizens`}</div>
                 {form.support_line && <div className="text-[12px] text-gray-500 mt-1">{form.support_line}</div>}
               </div>

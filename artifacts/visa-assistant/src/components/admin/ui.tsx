@@ -207,7 +207,7 @@ export function Toast({ message, kind = 'ok' }: { message: string; kind?: 'ok' |
 }
 
 export const CATEGORY_OPTIONS = [
-  { value: 'visa_exempt', label: 'Permit-free entry' },
+  { value: 'visa_exempt', label: 'E-visa free entry' },
   { value: 'evisa_direct', label: 'Direct e-permit' },
   { value: 'evisa_conditional', label: 'Conditional e-permit' },
   { value: 'age_special', label: 'Age-specific rules' },

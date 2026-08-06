@@ -374,7 +374,7 @@ function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
   return {
     top_block: {
       badge_country_label: str("badge_country_label") || country.name.toUpperCase(),
-      title: str("top_title") || "Get Your Travel Authorization",
+      title: str("top_title") || "Get Your Travel E-Visa",
       subtitle: str("top_subtitle") || `for ${country.name} Citizens`,
       support_line: str("support_line"),
       requirements_title: stripYear(str("requirements_title")) || "Travel Requirements for Turkey:",
@@ -405,7 +405,8 @@ function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
 }
 
 // ── User-facing wording sanitizer: "visa" → "permit" terminology ─────────────
-const DEPERMIT_SKIP_KEYS = new Set(["category", "status", "id", "slug", "iso2", "cta_href", "flag_emoji"]);
+// "title" (top-block başlığı) atlanır: kullanıcı isteğiyle "E-Visa" burada aynen görünmeli.
+const DEPERMIT_SKIP_KEYS = new Set(["category", "status", "id", "slug", "iso2", "cta_href", "flag_emoji", "title"]);
 
 function depermitText(s: string): string {
   return s
@@ -414,7 +415,10 @@ function depermitText(s: string): string {
     .replace(/\bvisa[- ]free\b/gi, "permit-free")
     .replace(/\bvisa exempt\b/gi, "Permit-free entry")
     .replace(/\bvisas\b/gi, (m) => (m[0] === "V" ? "Permits" : "permits"))
-    .replace(/\bvisa\b/gi, (m) => (m[0] === "V" ? "Permit" : "permit"));
+    .replace(/\bvisa\b/gi, (m) => (m[0] === "V" ? "Permit" : "permit"))
+    // Kullanıcı isteği (Ağu 2026): "Permit-free entry" her yerde "E-visa free entry" olarak görünsün.
+    // Bu kural zincirin SONUNDA olmalı — yoksa üstteki visa→permit kuralları "E-visa"yı bozar.
+    .replace(/\bpermit-free entry\b/gi, "E-visa free entry");
 }
 
 function depermitDeep<T>(v: T, key?: string): T {

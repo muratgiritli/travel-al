@@ -74,7 +74,7 @@ function DragHandle({ controls }: { controls: ReturnType<typeof useDragControls>
 /** Category-specific supporting line under the title. */
 function supportingLine(category: CountryCategory): string {
   switch (category) {
-    case 'visa_exempt': return 'Permit-free entry • insurance required';
+    case 'visa_exempt': return 'E-visa free entry • insurance required';
     case 'evisa_direct': return 'e-Permit + insurance required';
     case 'evisa_conditional': return 'Valid Schengen / UK / USA permit required';
     case 'age_special': return 'Age-based rules apply';
@@ -134,7 +134,7 @@ function CountryTopBlock({ card }: { card: VisaCardData }) {
       {/* 2) Title */}
       <div className="text-center mb-4">
         <h1 className="font-black text-[19px] text-gray-900 leading-tight">
-          {tb.title || 'Get Your Travel Authorization'}
+          {tb.title || 'Get Your Travel E-Visa'}
         </h1>
         <div className="font-semibold text-[14px] text-gray-700 mt-0.5">
           {tb.subtitle || `for ${card.country} Citizens`}
@@ -205,7 +205,7 @@ function VisaCard({ card }: { card: VisaCardData }) {
             className="px-2.5 py-1 rounded-full text-[12px] font-semibold"
             style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}
           >
-            {card.visa_status || 'Permit-free entry'}
+            {card.visa_status || 'E-visa free entry'}
           </span>
         )}
         {card.insurance_required && (
