@@ -1,7 +1,7 @@
 {
   "category": "evisa_conditional",
   "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
-  "note": "Ordinary passport holders who may get e-Visa only with valid Schengen/US/UK/Ireland visa or residence (or similar conditions). Apply inside this assistant — no evisa.gov.tr redirect.",
+  "note": "Ordinary passport holders who may get e-Visa only with valid Schengen/US/UK/Ireland visa or residence (or similar conditions). Apply inside this assistant.",
   "defaults": {
     "category": "evisa_conditional",
     "insurance_required": true,
@@ -15,7 +15,7 @@
       "Apply here in this assistant"
     ],
     "price_label": "Next step: verify eligibility + apply",
-    "price_example": "Tap APPLY NOW to continue. We do not send you to evisa.gov.tr.",
+    "price_example": "Tap APPLY NOW to continue. No external redirects.",
     "cta": "APPLY NOW",
     "cta_href": "/next",
     "is_active": true,

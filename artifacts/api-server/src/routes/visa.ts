@@ -93,7 +93,7 @@ const CONDITIONAL_DEFAULTS: Partial<RawCountry> = {
   features: [
     "Schengen / USA / UK / Ireland visa or residence usually required",
     "Travel insurance is mandatory",
-    "Apply here — no redirect to evisa.gov.tr",
+    "Apply here — no external redirects",
   ],
   price_label: "Next step: verify eligibility + apply",
   price_example: "Tap APPLY NOW to continue.",
@@ -264,7 +264,7 @@ async function loadAll() {
       ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
       is_active: o.is_active ?? (c as { is_active?: boolean }).is_active ?? true,
       cta: "APPLY NOW",
-      cta_href: `/apply/${c.id}`,
+      cta_href: "/next",
       precondition: o.visa_summary
         ? undefined
         : (c as { precondition?: string }).precondition ?? (condDefs as { precondition?: string }).precondition,
@@ -284,7 +284,7 @@ async function loadAll() {
       ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
       is_active: o.is_active ?? c.is_active ?? true,
       cta: "APPLY NOW",
-      cta_href: `/apply/${c.slug || c.id}`,
+      cta_href: "/next",
       age_bands: c.age_bands || [],
     }, o);
   });
@@ -302,7 +302,7 @@ async function loadAll() {
       ai_extra_context: o.ai_extra_context ?? c.ai_extra_context ?? "",
       is_active: o.is_active ?? c.is_active ?? true,
       cta: "APPLY NOW",
-      cta_href: `/apply/${c.slug || c.id}`,
+      cta_href: "/next",
     }, o);
   });
 

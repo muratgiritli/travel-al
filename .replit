@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -23,3 +23,6 @@ timeoutMs = 20000
 
 [userenv.shared]
 OPENAI_API_KEY = "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"
+
+[nix]
+channel = "stable-25_05"

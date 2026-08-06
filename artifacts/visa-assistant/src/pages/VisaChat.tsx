@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation } from 'wouter';
 import { Reorder, useDragControls } from 'framer-motion';
+import OptionCards from '@/components/OptionCards';
+import type { OptionCard } from '@/lib/settings';
 import {
   readSessionHistory,
   writeSessionHistory,
@@ -31,6 +32,7 @@ interface ChatMessage {
   role: 'bot' | 'user' | 'system';
   text: string;
   card?: VisaCardData | null;
+  optionCards?: OptionCard[];
 }
 
 function DragHandle({ controls }: { controls: ReturnType<typeof useDragControls> }) {
@@ -109,12 +111,19 @@ function VisaCard({ card }: { card: VisaCardData }) {
 
       {/* Features */}
       <div className="flex flex-col gap-2 mt-3 mb-3">
-        {card.features.map((f, i) => (
-          <div key={i} className="flex items-center gap-2 text-[13px] text-gray-700">
-            <span className="text-base shrink-0">{f.slice(0, 2)}</span>
-            <span>{f.slice(2).trim()}</span>
-          </div>
-        ))}
+        {card.features.map((f, i) => {
+          // Only split off a leading emoji — never split plain words
+          // (fixes "Sc hengen" / "Tr avel" style typography bugs).
+          const m = f.match(/^(\p{Extended_Pictographic}(?:[\uFE0F\u200D]\p{Extended_Pictographic}?)*)\s*/u);
+          const icon = m ? m[1] : '✓';
+          const text = m ? f.slice(m[0].length) : f;
+          return (
+            <div key={i} className="flex items-center gap-2 text-[13px] text-gray-700">
+              <span className="text-base shrink-0">{icon}</span>
+              <span>{text}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Price box */}
@@ -169,10 +178,12 @@ function PassportPickerCard({
   countries,
   onSelect,
   disabled,
+  loading,
 }: {
   countries: Country[];
   onSelect: (id: string) => void;
   disabled: boolean;
+  loading: boolean;
 }) {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -232,19 +243,37 @@ function PassportPickerCard({
           {q ? `Results (${filtered.length})` : 'All countries'}
         </div>
         <div className="overflow-y-auto flex flex-col" style={{ maxHeight: 200 }}>
-          {filtered.map(c => (
-            <button
-              key={c.id}
-              onClick={() => onSelect(c.id)}
-              className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-left text-[13px] text-gray-800 hover:bg-gray-50"
-            >
-              <span className="text-base">{c.flag_emoji}</span>
-              <span className="flex-1 min-w-0 truncate">{c.name}</span>
-              <span className="text-gray-300 text-xs">›</span>
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <div className="px-2 py-3 text-[13px] text-gray-400">No country found.</div>
+          {loading ? (
+            /* Skeleton rows while countries load — never a false empty state */
+            <>
+              {[0, 1, 2, 3, 4].map(i => (
+                <div key={i} className="flex items-center gap-2.5 px-2 py-2">
+                  <div className="w-5 h-5 rounded-full bg-gray-100 animate-pulse" />
+                  <div
+                    className="h-3 rounded bg-gray-100 animate-pulse"
+                    style={{ width: `${55 + (i % 3) * 15}%` }}
+                  />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {filtered.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => onSelect(c.id)}
+                  className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-left text-[13px] text-gray-800 hover:bg-gray-50"
+                >
+                  <span className="text-base">{c.flag_emoji}</span>
+                  <span className="flex-1 min-w-0 truncate">{c.name}</span>
+                  <span className="text-gray-300 text-xs">›</span>
+                </button>
+              ))}
+              {/* Only show when an active search has zero matches */}
+              {q !== '' && filtered.length === 0 && (
+                <div className="px-2 py-3 text-[13px] text-gray-400">No country found.</div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -258,6 +287,7 @@ function generateSessionId(): string {
 export default function VisaChat() {
   const { settings } = useSettings();
   const [countries, setCountries] = useState<Country[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
   const [selectedId, setSelectedId] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'bot', text: settings.chat.welcome_message },
@@ -266,7 +296,6 @@ export default function VisaChat() {
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
-  const [, navigate] = useLocation();
 
   // ── History state ──
   const [showHistory, setShowHistory] = useState(false);
@@ -278,8 +307,31 @@ export default function VisaChat() {
     fetch('/api/travel/countries')
       .then(r => r.json())
       .then(d => setCountries(d.countries ?? []))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setCountriesLoading(false));
   }, []);
+
+  // ── Deep link support: /?country=slug selects the country in-chat.
+  // The URL is normalized back to "/" — chat state never lives in the path.
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandled.current || countries.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const slug = (params.get('country') || '').trim().toLowerCase();
+    if (window.location.search) {
+      window.history.replaceState(null, '', '/');
+    }
+    if (!slug) { deepLinkHandled.current = true; return; }
+    deepLinkHandled.current = true;
+    const match = countries.find(c =>
+      c.id.toLowerCase() === slug ||
+      c.iso2.toLowerCase() === slug ||
+      c.name.toLowerCase() === slug ||
+      c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === slug,
+    );
+    if (match) void handleSelectCountry(match.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countries]);
 
   // Sync the opening bot message with admin-configured welcome text once
   // settings load — only while the thread is still the fresh single greeting.
@@ -402,25 +454,27 @@ export default function VisaChat() {
     if (!country) return;
     selectingRef.current = true;
     setSelectedId(countryId);
-    // Non-exempt categories → open full landing page
-    if (
+
+    // ALL categories stay in chat on "/" — no navigation on country select.
+    const hasOptionCards =
       country.category === 'evisa_conditional' ||
       country.category === 'age_special' ||
-      country.category === 'sticker_mission'
-    ) {
-      const slug =
-        (country as { slug?: string }).slug ||
-        country.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      navigate(`/${slug}`);
-      return;
-    }
+      country.category === 'sticker_mission';
+
+    // Fetch admin-configured option cards in parallel with the chat stream.
+    const optionCardsPromise: Promise<OptionCard[]> = hasOptionCards
+      ? fetch(`/api/travel/countries/${countryId}`)
+          .then(r => (r.ok ? r.json() : Promise.reject()))
+          .then(d => (d.option_cards ?? []) as OptionCard[])
+          .catch(() => [])
+      : Promise.resolve([]);
 
     // Label this session by the country
     sessionLabelRef.current = `${country.flag_emoji} ${country.name}`;
 
     const userMsg = `I have a ${country.name} passport. What do I need to enter Turkey?`;
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
-    addMsg({ role: 'system', text: settings.chat.passport_selected_message });
+    addMsg({ role: 'system', text: `Passport selected: ${country.name}` });
     addMsg({ role: 'user', text: 'What do I need to enter Turkey?' });
     setUnlocked(true);
     setLoading(true);
@@ -460,6 +514,18 @@ export default function VisaChat() {
     } finally {
       setLoading(false);
       void card;
+      // Attach in-chat option cards (conditional / age-special / sticker countries)
+      const optionCards = await optionCardsPromise;
+      if (optionCards.length > 0) {
+        setMessages(prev => {
+          const updated = [...prev];
+          const idx = botIndex.current;
+          if (idx >= 0 && idx < updated.length) {
+            updated[idx] = { ...updated[idx], optionCards };
+          }
+          return updated;
+        });
+      }
       // Save to history after the first response
       setMessages(prev => {
         persistSession(prev, sessionLabelRef.current);
@@ -627,13 +693,20 @@ export default function VisaChat() {
                 </div>
               )}
               {msg.card && <VisaCard card={msg.card} />}
-              {/* In-chat passport picker: shown under the opening bot question */}
-              {i === 0 && msg.role === 'bot' && (
+              {msg.optionCards && msg.optionCards.length > 0 && (
+                <div className="mt-2 ml-10">
+                  <OptionCards cards={msg.optionCards} />
+                </div>
+              )}
+              {/* In-chat passport picker: shown under the opening bot question,
+                  collapsed permanently once a passport is selected */}
+              {i === 0 && msg.role === 'bot' && !selectedId && (
                 <PassportPickerCard
                   key={sessionIdRef.current}
                   countries={countries}
                   onSelect={handleSelectCountry}
                   disabled={!!selectedId || loading}
+                  loading={countriesLoading}
                 />
               )}
             </div>

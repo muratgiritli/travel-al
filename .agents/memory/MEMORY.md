@@ -1,1 +1,3 @@
 - [No "visa" wording policy](wording-policy.md) — UI must never show "visa"; brand "Turkey Travel Assistant"; server sanitizer depermitText; API at /api/travel/*.
+- [Admin DB overrides can undo wording/CTA fixes](admin-db-overrides.md) — visa_country_overrides.extra overrides JSON data; check it after any wording/CTA fix.
+- Chat-only architecture is locked: all country results render in chat on "/"; /{slug} only redirects to /?country=slug; reserved routes /faq /track /contact /checkout never hit the country catch-all.

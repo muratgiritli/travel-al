@@ -1,7 +1,7 @@
 {
   "category": "age_special",
   "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
-  "note": "Age-based rules for ordinary passports. Reference UX: https://evisacity.com/egypt. Apply inside assistant — no evisa.gov.tr redirect.",
+  "note": "Age-based rules for ordinary passports. Reference UX: https://evisacity.com/egypt. Apply inside assistant.",
   "defaults": {
     "category": "age_special",
     "insurance_required": true,
