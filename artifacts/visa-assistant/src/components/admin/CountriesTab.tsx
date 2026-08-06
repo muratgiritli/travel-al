@@ -5,6 +5,7 @@ import {
   UnauthorizedError,
   getCountries,
   createCountry,
+  saveCountry,
 } from './api';
 import {
   Button,
@@ -105,18 +106,39 @@ export default function CountriesTab({
       <Card>
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
           {filtered.map((c) => (
-            <button
+            <div
               key={c.id}
-              onClick={() => setEditingId(c.id)}
-              className="text-left px-3.5 py-3 rounded-xl transition-colors hover:bg-gray-50"
+              className="text-left px-3.5 py-3 rounded-xl transition-colors hover:bg-gray-50 cursor-pointer"
               style={{ border: '1px solid #e5e7eb', background: '#fff' }}
+              onClick={() => setEditingId(c.id)}
             >
               <div className="text-[14px] font-medium text-gray-800">
                 {c.flag_emoji} {c.name}
-                {c.is_active === false && <span className="ml-1 text-[11px] text-red-500">(inactive)</span>}
+                {c.is_active === false && <span className="ml-1 text-[11px] text-red-500">(unpublished)</span>}
               </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">{categoryLabel(c.category)}</div>
-            </button>
+              <div className="text-[11px] text-gray-400 mt-0.5 flex items-center justify-between gap-2">
+                <span>{categoryLabel(c.category)}</span>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await saveCountry(c.id, { is_active: c.is_active === false });
+                      load();
+                      onSaved();
+                    } catch (err) {
+                      if (err instanceof UnauthorizedError) onUnauthorized();
+                      else onError((err as Error).message);
+                    }
+                  }}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full hover:opacity-80"
+                  style={c.is_active === false
+                    ? { background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }
+                    : { background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}
+                >
+                  {c.is_active === false ? 'Publish' : 'Unpublish'}
+                </button>
+              </div>
+            </div>
           ))}
           {filtered.length === 0 && <p className="text-gray-400 text-[13px]">No countries match.</p>}
         </div>

@@ -18,7 +18,19 @@ interface Country {
   visa_summary: string; category: CountryCategory;
 }
 
+interface TopBlockData {
+  badge_country_label?: string;
+  title?: string;
+  subtitle?: string;
+  support_line?: string;
+  requirements_title?: string;
+  passport_validity_text?: string;
+  max_stay_text?: string;
+  insurance_label?: string;
+}
+
 interface VisaCardData {
+  top_block?: TopBlockData;
   country: string; iso2: string; flag_emoji: string;
   category: CountryCategory;
   visa_status: string; insurance_required: boolean;
@@ -96,6 +108,7 @@ function capitalize(s: string): string {
 }
 
 function CountryTopBlock({ card }: { card: VisaCardData }) {
+  const tb = card.top_block || {};
   return (
     <div
       className="rounded-2xl p-4 shadow-sm mt-2 ml-10 min-w-0"
@@ -114,20 +127,20 @@ function CountryTopBlock({ card }: { card: VisaCardData }) {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide text-white"
           style={{ background: '#0a1f44', border: '1px solid #0a1f44' }}
         >
-          {card.flag_emoji} {card.country.toUpperCase()}
+          {card.flag_emoji} {tb.badge_country_label || card.country.toUpperCase()}
         </span>
       </div>
 
       {/* 2) Title */}
       <div className="text-center mb-4">
         <h1 className="font-black text-[19px] text-gray-900 leading-tight">
-          Get Your Travel Authorization
+          {tb.title || 'Get Your Travel Authorization'}
         </h1>
         <div className="font-semibold text-[14px] text-gray-700 mt-0.5">
-          for {card.country} Citizens
+          {tb.subtitle || `for ${card.country} Citizens`}
         </div>
         <div className="text-[12px] text-gray-500 mt-1">
-          {supportingLine(card.category)}
+          {tb.support_line || supportingLine(card.category)}
         </div>
       </div>
 
@@ -137,16 +150,16 @@ function CountryTopBlock({ card }: { card: VisaCardData }) {
         style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
       >
         <div className="px-4 pt-3 pb-2 font-bold text-[13px] text-gray-900">
-          Travel Requirements for Turkey:
+          {tb.requirements_title || 'Travel Requirements for Turkey:'}
         </div>
         <div className="flex flex-col">
           <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
             <span className="text-[13px] text-gray-500">Passport validity</span>
-            <span className="text-[13px] font-semibold text-gray-900">Minimum 180 days</span>
+            <span className="text-[13px] font-semibold text-gray-900">{tb.passport_validity_text || 'Minimum 180 days'}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-2.5 gap-3" style={{ borderTop: '1px solid #eef1f5' }}>
             <span className="text-[13px] text-gray-500 shrink-0">Maximum stay</span>
-            <span className="text-[13px] font-semibold text-gray-900 text-right min-w-0 break-words">{maxStayText(card)}</span>
+            <span className="text-[13px] font-semibold text-gray-900 text-right min-w-0 break-words">{tb.max_stay_text || maxStayText(card)}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
             <span className="text-[13px] text-gray-500">Insurance</span>
@@ -154,7 +167,7 @@ function CountryTopBlock({ card }: { card: VisaCardData }) {
               className="text-[12px] font-bold px-2.5 py-0.5 rounded-full"
               style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}
             >
-              Required
+              {tb.insurance_label || 'Required'}
             </span>
           </div>
         </div>
@@ -562,77 +575,37 @@ export default function VisaChat() {
     selectingRef.current = true;
     setSelectedId(countryId);
 
-    // ALL categories stay in chat on "/" — no navigation on country select.
-    const hasOptionCards =
-      country.category === 'evisa_conditional' ||
-      country.category === 'age_special' ||
-      country.category === 'sticker_mission';
-
-    // Fetch admin-configured option cards in parallel with the chat stream.
-    const optionCardsPromise: Promise<OptionCard[]> = hasOptionCards
-      ? fetch(`/api/travel/countries/${countryId}`)
-          .then(r => (r.ok ? r.json() : Promise.reject()))
-          .then(d => (d.option_cards ?? []) as OptionCard[])
-          .catch(() => [])
-      : Promise.resolve([]);
-
     // Label this session by the country
     sessionLabelRef.current = `${country.flag_emoji} ${country.name}`;
 
-    const userMsg = `I have a ${country.name} passport. What do I need to enter Turkey?`;
+    // ALL categories stay in chat on "/" — no navigation on country select.
+    // NO AI-generated intro bubble: the result is admin-managed content only
+    // (top block → card → option cards → CTAs).
     addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
     addMsg({ role: 'system', text: `Passport selected: ${country.name}` });
-    addMsg({ role: 'user', text: 'What do I need to enter Turkey?' });
     setUnlocked(true);
     setLoading(true);
 
-    // Placeholder bot message for streaming
-    const botIndex = { current: -1 };
-    setMessages(prev => {
-      botIndex.current = prev.length;
-      return [...prev, { role: 'bot' as const, text: '' }];
-    });
-
-    let card: VisaCardData | null = null;
     try {
-      await sendStreamingChat(
-        countryId,
-        userMsg,
-        [],
-        (c) => {
-          card = c;
-          setMessages(prev => {
-            const updated = [...prev];
-            updated[botIndex.current] = { ...updated[botIndex.current], card: c };
-            return updated;
-          });
-        },
-        (token) => {
-          setMessages(prev => {
-            const updated = [...prev];
-            updated[botIndex.current] = {
-              ...updated[botIndex.current],
-              text: updated[botIndex.current].text + token,
-            };
-            return updated;
-          });
-        },
-      );
+      const res = await fetch(`/api/travel/countries/${countryId}`);
+      if (!res.ok) throw new Error('country fetch failed');
+      const d = await res.json();
+      const card = (d.card ?? null) as VisaCardData | null;
+      const optionCards = (d.option_cards ?? []) as OptionCard[];
+      const hasOptionCards =
+        country.category === 'evisa_conditional' ||
+        country.category === 'age_special' ||
+        country.category === 'sticker_mission';
+      addMsg({
+        role: 'bot',
+        text: '',
+        card,
+        optionCards: hasOptionCards && optionCards.length > 0 ? optionCards : undefined,
+      });
+    } catch {
+      addMsg({ role: 'bot', text: 'Sorry, something went wrong loading this country. Please try again.' });
     } finally {
       setLoading(false);
-      void card;
-      // Attach in-chat option cards (conditional / age-special / sticker countries)
-      const optionCards = await optionCardsPromise;
-      if (optionCards.length > 0) {
-        setMessages(prev => {
-          const updated = [...prev];
-          const idx = botIndex.current;
-          if (idx >= 0 && idx < updated.length) {
-            updated[idx] = { ...updated[idx], optionCards };
-          }
-          return updated;
-        });
-      }
       // Save to history after the first response
       setMessages(prev => {
         persistSession(prev, sessionLabelRef.current);
@@ -773,7 +746,7 @@ export default function VisaChat() {
               {msg.role === 'system' && (
                 <div className="text-center text-[12px] text-gray-400 my-1 font-medium">{msg.text}</div>
               )}
-              {msg.role === 'bot' && (
+              {msg.role === 'bot' && msg.text !== '' && (
                 <div className="flex items-start gap-2">
                   <div
                     className="shrink-0 flex items-center justify-center text-sm"

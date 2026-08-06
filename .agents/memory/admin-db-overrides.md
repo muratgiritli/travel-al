@@ -1,10 +1,12 @@
 ---
-name: Admin DB overrides can undo wording/CTA fixes
-description: Country content is deep-merged from JSON data + visa_country_overrides DB rows; fixing JSON/defaults is not enough.
+name: Admin DB overrides
+description: How visa_country_overrides interacts with seed JSON data — pitfalls after wording/CTA fixes and null-column clobbering.
 ---
 
-The rule: when fixing user-visible wording or CTA links for countries, always check the `visa_country_overrides` table (`extra` jsonb column) — admin edits stored there override the JSON data files and server defaults.
+# Admin DB overrides (visa_country_overrides)
 
-**Why:** After scrubbing "evisa.gov.tr" from data files and defaults, Pakistan still showed it — its `pk` override row carried the old `price_example`, a broken `cta_href: /apply/pk`, and a single empty option card that suppressed the 4 default option cards.
-
-**How to apply:** After any content/wording fix, query `SELECT country_id, extra::text FROM visa_country_overrides WHERE extra::text ILIKE '%<bad string>%'` and clean matching rows. Empty `option_cards: []` in an override makes category defaults apply again. All CTA hrefs must point to real routes (/next, /checkout).
+- The `extra` jsonb column deep-merges over the seed JSON country data. After any wording/CTA fix in JSON files, check DB overrides — they can reintroduce banned wording or broken CTAs.
+- **Null scalar columns must never be spread over seed data.** The override loader must omit keys whose DB value is NULL; an override object with `visa_summary: undefined` spread via `{ ...seed, ...override }` clobbers the seed value. This bug hid Germany's stay info when a row with only `is_active` existed. Fixed in `loadDbOverrides` — keep the "only include non-null keys" pattern if that code is touched.
+- **Why:** inserting a row for one field (e.g. publish toggle) leaves all other columns NULL — very common.
+- Publishing: `is_active=false` hides a country from the public picker AND the public detail endpoint returns 404 (admin routes still see it). Admin UI labels this "Published".
+- Top-block content (badges/title/requirements card) is admin-editable via `extra` keys: badge_country_label, top_title, top_subtitle, support_line, requirements_title (years stripped server-side), passport_validity_text, max_stay_text, insurance_label.

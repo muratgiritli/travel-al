@@ -49,6 +49,14 @@ type Form = {
   age_bands: AgeBand[];
   option_cards: OptionCard[];
   pricing_override: PricingOverride;
+  badge_country_label: string;
+  top_title: string;
+  top_subtitle: string;
+  support_line: string;
+  requirements_title: string;
+  passport_validity_text: string;
+  max_stay_text: string;
+  insurance_label: string;
 };
 
 function toForm(c: RawCountry): Form {
@@ -77,6 +85,14 @@ function toForm(c: RawCountry): Form {
     age_bands: c.age_bands ?? [],
     option_cards: c.option_cards ?? [],
     pricing_override: c.pricing_override ?? {},
+    badge_country_label: c.badge_country_label ?? '',
+    top_title: c.top_title ?? '',
+    top_subtitle: c.top_subtitle ?? '',
+    support_line: c.support_line ?? '',
+    requirements_title: c.requirements_title ?? '',
+    passport_validity_text: c.passport_validity_text ?? '',
+    max_stay_text: c.max_stay_text ?? '',
+    insurance_label: c.insurance_label ?? '',
   };
 }
 
@@ -164,6 +180,14 @@ export default function CountryEditor({
         age_bands: form.age_bands,
         option_cards: form.option_cards,
         pricing_override: form.pricing_override,
+        badge_country_label: form.badge_country_label,
+        top_title: form.top_title,
+        top_subtitle: form.top_subtitle,
+        support_line: form.support_line,
+        requirements_title: form.requirements_title,
+        passport_validity_text: form.passport_validity_text,
+        max_stay_text: form.max_stay_text,
+        insurance_label: form.insurance_label,
       };
       const res = await saveCountry(id, payload);
       setCard(res.card);
@@ -229,8 +253,25 @@ export default function CountryEditor({
               />
             </div>
             <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <Toggle label="Active" checked={form.is_active} onChange={(v) => set('is_active', v)} />
+              <Toggle label="Published (visible in public picker)" checked={form.is_active} onChange={(v) => set('is_active', v)} />
               <Toggle label="Insurance required" checked={form.insurance_required} onChange={(v) => set('insurance_required', v)} />
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="font-semibold text-[15px] text-gray-900 mb-1">Top block</h3>
+            <p className="text-[12px] text-gray-500 mb-4">
+              Badges + title + requirements card shown first in the chat result. Leave blank to use defaults.
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="Badge country label" value={form.badge_country_label} onChange={(v) => set('badge_country_label', v)} placeholder={form.name.toUpperCase()} checkForbidden />
+              <Field label="Title" value={form.top_title} onChange={(v) => set('top_title', v)} placeholder="Get Your Travel Authorization" checkForbidden />
+              <Field label="Subtitle" value={form.top_subtitle} onChange={(v) => set('top_subtitle', v)} placeholder={`for ${form.name} Citizens`} checkForbidden />
+              <Field label="Support line" value={form.support_line} onChange={(v) => set('support_line', v)} placeholder="(category default)" checkForbidden />
+              <Field label="Requirements title (no year)" value={form.requirements_title} onChange={(v) => set('requirements_title', v)} placeholder="Travel Requirements for Turkey:" checkForbidden />
+              <Field label="Passport validity text" value={form.passport_validity_text} onChange={(v) => set('passport_validity_text', v)} placeholder="Minimum 180 days" checkForbidden />
+              <Field label="Max stay text" value={form.max_stay_text} onChange={(v) => set('max_stay_text', v)} placeholder="(derived from status)" checkForbidden />
+              <Field label="Insurance label" value={form.insurance_label} onChange={(v) => set('insurance_label', v)} placeholder="Required" checkForbidden />
             </div>
           </Card>
 
@@ -327,6 +368,41 @@ export default function CountryEditor({
         {/* ── Right column: live preview ── */}
         <div className="lg:sticky lg:top-4 self-start w-full">
           <Card>
+            <Label>Top block preview</Label>
+            <div className="rounded-2xl p-4 mt-2 mb-4" style={{ background: '#fff', border: '1px solid #e5e7eb' }}>
+              <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide" style={{ background: 'linear-gradient(135deg, #f3e3bd, #e2c684)', color: '#7c5c1e', border: '1px solid #d9bd7f' }}>
+                  🇹🇷 TURKEY
+                </span>
+                <span className="text-gray-400 text-[13px] font-bold">+</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide text-white" style={{ background: '#0a1f44' }}>
+                  {form.flag_emoji} {form.badge_country_label || form.name.toUpperCase()}
+                </span>
+              </div>
+              <div className="text-center mb-4">
+                <div className="font-black text-[19px] text-gray-900 leading-tight">{form.top_title || 'Get Your Travel Authorization'}</div>
+                <div className="font-semibold text-[14px] text-gray-700 mt-0.5">{form.top_subtitle || `for ${form.name} Citizens`}</div>
+                {form.support_line && <div className="text-[12px] text-gray-500 mt-1">{form.support_line}</div>}
+              </div>
+              <div className="rounded-xl overflow-hidden" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                <div className="px-4 pt-3 pb-2 font-bold text-[13px] text-gray-900">{form.requirements_title || 'Travel Requirements for Turkey:'}</div>
+                <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
+                  <span className="text-[13px] text-gray-500">Passport validity</span>
+                  <span className="text-[13px] font-semibold text-gray-900">{form.passport_validity_text || 'Minimum 180 days'}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
+                  <span className="text-[13px] text-gray-500">Maximum stay</span>
+                  <span className="text-[13px] font-semibold text-gray-900">{form.max_stay_text || '(derived from status)'}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
+                  <span className="text-[13px] text-gray-500">Insurance</span>
+                  <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
+                    {form.insurance_label || 'Required'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <Label>Live card preview</Label>
             <div className="rounded-2xl p-4 mt-2" style={{ background: '#fff', border: '1px solid #e5e7eb' }}>
               <div className="flex items-center gap-2 text-[14px] font-medium text-gray-800 mb-3">

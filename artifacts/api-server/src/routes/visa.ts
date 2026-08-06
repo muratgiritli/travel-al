@@ -69,6 +69,10 @@ const EXTRA_FIELDS = [
   "precondition", "age_bands", "airline_conditions", "mission_note",
   "headline", "features", "price_label", "price_example", "cta", "cta_href",
   "option_cards", "pricing_override",
+  // Top-block content (badges + title + requirements card shown first in chat)
+  "badge_country_label", "top_title", "top_subtitle", "support_line",
+  "requirements_title", "passport_validity_text", "max_stay_text", "insurance_label",
+  "sort_order",
 ] as const;
 
 /** Apply the extra JSON override fields onto a merged country object. */
@@ -137,15 +141,18 @@ async function loadDbOverrides(): Promise<Record<string, Override>> {
     const rows = await db.select().from(visaCountryOverridesTable);
     const map: Record<string, Override> = {};
     for (const row of rows) {
-      map[row.countryId] = {
-        visa_summary:       row.visaSummary        ?? undefined,
-        stay_rule:          row.stayRule            ?? undefined,
-        insurance_required: row.insuranceRequired   ?? undefined,
-        admin_html_notes:   row.adminHtmlNotes      ?? undefined,
-        ai_extra_context:   row.aiExtraContext       ?? undefined,
-        is_active:          row.isActive            ?? undefined,
-        extra:              (row.extra as Record<string, unknown> | null) ?? undefined,
-      };
+      // IMPORTANT: only include keys that actually have a value. A key set to
+      // `undefined` would still be spread over the seed data (`{ ...c, ...o }`)
+      // and clobber the seed value with `undefined`.
+      const o: Override = {};
+      if (row.visaSummary != null)      o.visa_summary = row.visaSummary;
+      if (row.stayRule != null)         o.stay_rule = row.stayRule;
+      if (row.insuranceRequired != null) o.insurance_required = row.insuranceRequired;
+      if (row.adminHtmlNotes != null)   o.admin_html_notes = row.adminHtmlNotes;
+      if (row.aiExtraContext != null)   o.ai_extra_context = row.aiExtraContext;
+      if (row.isActive != null)         o.is_active = row.isActive;
+      if (row.extra != null)            o.extra = row.extra as Record<string, unknown>;
+      map[row.countryId] = o;
     }
     return map;
   } catch (err) {
@@ -346,9 +353,26 @@ async function getCountry(idOrIso: string) {
   );
 }
 
+/** Strip any year (e.g. "2026") from the requirements title — years are forbidden. */
+function stripYear(s: string): string {
+  return s.replace(/\s*\(?\b20\d{2}\b\)?\s*/g, " ").replace(/\s+:/g, ":").replace(/\s{2,}/g, " ").trim();
+}
+
 function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
   if (!country) return null;
+  const x = country as Record<string, unknown>;
+  const str = (k: string) => (typeof x[k] === "string" ? (x[k] as string) : "");
   return {
+    top_block: {
+      badge_country_label: str("badge_country_label") || country.name.toUpperCase(),
+      title: str("top_title") || "Get Your Travel Authorization",
+      subtitle: str("top_subtitle") || `for ${country.name} Citizens`,
+      support_line: str("support_line"),
+      requirements_title: stripYear(str("requirements_title")) || "Travel Requirements for Turkey:",
+      passport_validity_text: str("passport_validity_text") || "Minimum 180 days",
+      max_stay_text: str("max_stay_text"),
+      insurance_label: str("insurance_label") || "Required",
+    },
     country: country.name,
     name_tr: (country as { name_tr?: string }).name_tr,
     iso2: country.iso2,
@@ -464,7 +488,11 @@ router.get("/travel/countries", async (_req, res) => {
 router.get("/travel/countries/:id", async (req, res) => {
   try {
     const country = await getCountry(req.params.id);
-    if (!country) { res.status(404).json({ error: "Country not found" }); return; }
+    // Unpublished countries are hidden from the public (admin routes still see them)
+    if (!country || (country as { is_active?: boolean }).is_active === false) {
+      res.status(404).json({ error: "Country not found" });
+      return;
+    }
     const settings = await getSettings();
     const c = country as unknown as AnyCountry;
     res.json(depermitDeep({
@@ -782,6 +810,21 @@ router.put("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
       : {};
 
     const body = req.body || {};
+
+    // Validate option-card prices as numbers before persisting
+    if (Array.isArray(body.option_cards)) {
+      for (const oc of body.option_cards as Array<Record<string, unknown>>) {
+        if (oc.price === undefined || oc.price === null || oc.price === "") continue;
+        const n = Number(oc.price);
+        if (!Number.isFinite(n) || n < 0) {
+          res.status(400).json({ error: `Option card price must be a number (got "${oc.price}")` });
+          return;
+        }
+        oc.price = n;
+      }
+    }
+    // Never allow a year to be saved into the requirements title
+    if (typeof body.requirements_title === "string") body.requirements_title = stripYear(body.requirements_title);
 
     // Collect extended fields into the extra JSON blob
     const prevExtra = prev.extra || {};

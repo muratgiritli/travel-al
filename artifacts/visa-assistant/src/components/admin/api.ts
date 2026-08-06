@@ -165,6 +165,15 @@ export interface RawCountry {
   cta_href?: string;
   option_cards?: OptionCard[];
   pricing_override?: PricingOverride;
+  // Top-block content (badges + title + requirements card shown first in chat)
+  badge_country_label?: string;
+  top_title?: string;
+  top_subtitle?: string;
+  support_line?: string;
+  requirements_title?: string;
+  passport_validity_text?: string;
+  max_stay_text?: string;
+  insurance_label?: string;
 }
 
 export interface CountryPayload extends RawCountry {}
