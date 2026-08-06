@@ -1,0 +1,87 @@
+Replit’e yapıştır:
+
+```text
+CRITICAL UI BLOCK — ADD TO EVERY COUNTRY RESULT. OBEY EXACTLY.
+Site: https://perfect-site.replit.app/
+Do not freestyle. Do not redesign unrelated parts.
+
+==================================================
+GOAL
+==================================================
+At the TOP of EVERY country result (Germany, Vietnam, Pakistan, Egypt, Nigeria, and all others), show the same header block style as the provided mockup.
+
+This block must appear first, above option cards / insurance CTA / APPLY NOW.
+
+Keep current rule: country results stay inside chat on "/".
+Do NOT open separate landing pages.
+Do NOT add FAQ/Track header or bottom Home/Track/FAQ/Contact tabs.
+
+==================================================
+TOP BLOCK STRUCTURE (MANDATORY)
+==================================================
+1) Badges row (centered):
+   - Left pill: 🇹🇷 TURKEY  (gold/tan style)
+   - small "+"
+   - Right pill: {FLAG} {COUNTRY}  (dark navy style)
+   Example: 🇵🇰 PAKISTAN
+
+2) Title (centered):
+   - H1: Get Your Travel Authorization
+   - Subtitle: for {Country} Citizens
+   - Short supporting line (dynamic by category), examples:
+     - exempt: Permit-free entry • insurance required
+     - direct e-permit: e-Permit + insurance required
+     - conditional: Valid Schengen / UK / USA permit required
+     - age-special: Age-based rules apply
+     - sticker: No online e-Permit • embassy sticker process
+
+3) Requirements card:
+   Title MUST be exactly:
+   Travel Requirements for Turkey:
+   (NO year. FORBIDDEN: "2026", "(2026)", any year number in this title)
+
+   Rows:
+   - Passport validity | Minimum 180 days
+   - Maximum stay | dynamic from country data (e.g. 30 Days, Single Entry / 90 days / 180)
+   - Insurance | Required   (highlight in orange/red)
+
+==================================================
+DYNAMIC RULES
+==================================================
+- {Country} always from selected passport country
+- Badges always TURKEY + selected country
+- Maximum stay text comes from country record (stay_rule / max stay field)
+- Supporting line depends on category
+- Same visual block on ALL countries, only dynamic texts change
+
+==================================================
+COPY RULES
+==================================================
+- Brand: Turkey Travel Assistant
+- Forbidden visible words: visa, e-Visa, Visa Office, Visa Assistant
+- Use: Travel Authorization / e-Permit / sticker permit
+- NEVER write year 2026 in requirements title
+- Remove any existing "Travel Requirements for Turkey (2026)" text
+
+==================================================
+PLACEMENT
+==================================================
+In-chat country result order:
+1) Passport selected chip
+2) THIS TOP BLOCK (badges + title + requirements card)
+3) Then category content (insurance card / options / age pathways / sticker options)
+4) APPLY NOW / Get travel insurance CTAs
+
+==================================================
+ACCEPTANCE
+==================================================
+A) Pakistan result shows TURKEY + PAKISTAN badges + this top block
+B) Germany / Vietnam / Egypt / Nigeria also show the same top block style
+C) Title is "Travel Requirements for Turkey:" with NO 2026
+D) Still stays on "/" chat (no /pakistan separate page)
+E) No invented FAQ/Track/bottom tabs
+F) Redeploy and confirm
+
+Do only this UI addition + remove year text.
+Reply: "I did not change anything outside the prompt."
+```

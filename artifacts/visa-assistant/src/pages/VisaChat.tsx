@@ -56,6 +56,113 @@ function DragHandle({ controls }: { controls: ReturnType<typeof useDragControls>
     </div>
   );
 }
+// ── Top header block: badges + title + requirements card ──
+// Shown first on EVERY country result, above category content and CTAs.
+
+/** Category-specific supporting line under the title. */
+function supportingLine(category: CountryCategory): string {
+  switch (category) {
+    case 'visa_exempt': return 'Permit-free entry • insurance required';
+    case 'evisa_direct': return 'e-Permit + insurance required';
+    case 'evisa_conditional': return 'Valid Schengen / UK / USA permit required';
+    case 'age_special': return 'Age-based rules apply';
+    case 'sticker_mission': return 'No online e-Permit • embassy sticker process';
+    default: return 'Insurance required';
+  }
+}
+
+/** Derive the "Maximum stay" text from the country record (visa_status / stay rule). */
+function maxStayText(card: VisaCardData): string {
+  // visa_status often looks like "e-Permit • 90 days multiple entry" or
+  // "Permit-free entry • 90 days / 180". Only accept the bullet suffix when it
+  // is a recognizable stay-duration pattern — never unrelated numeric text.
+  const status = card.visa_status || '';
+  const afterDot = status.split('•').slice(1).join('•').trim();
+  const durationLike = /^\d+\s*(days?|months?)\b|^\d+\s*\/\s*\d+/i;
+  if (afterDot && durationLike.test(afterDot)) return capitalize(afterDot);
+  // Fall back to scanning the stay rule / status text for "<n> days ..."
+  const rule = card.body?.[0] || '';
+  const m = rule.match(/(\d+)[- ]day(?:s)?(?:[^.]*?\b(single|multiple)[- ]entry)?/i)
+    || status.match(/(\d+)[- ]day(?:s)?(?:[^.]*?\b(single|multiple)[- ]entry)?/i);
+  if (m) {
+    const entry = m[2] ? `, ${capitalize(m[2].toLowerCase())} Entry` : '';
+    return `${m[1]} Days${entry}`;
+  }
+  return 'See details below';
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function CountryTopBlock({ card }: { card: VisaCardData }) {
+  return (
+    <div
+      className="rounded-2xl p-4 shadow-sm mt-2 ml-10 min-w-0"
+      style={{ background: '#fff', border: '1px solid #e5e7eb', maxWidth: 'calc(100% - 2.5rem)', overflowWrap: 'anywhere' }}
+    >
+      {/* 1) Badges row */}
+      <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+        <span
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide"
+          style={{ background: 'linear-gradient(135deg, #f3e3bd, #e2c684)', color: '#7c5c1e', border: '1px solid #d9bd7f' }}
+        >
+          🇹🇷 TURKEY
+        </span>
+        <span className="text-gray-400 text-[13px] font-bold">+</span>
+        <span
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide text-white"
+          style={{ background: '#0a1f44', border: '1px solid #0a1f44' }}
+        >
+          {card.flag_emoji} {card.country.toUpperCase()}
+        </span>
+      </div>
+
+      {/* 2) Title */}
+      <div className="text-center mb-4">
+        <h1 className="font-black text-[19px] text-gray-900 leading-tight">
+          Get Your Travel Authorization
+        </h1>
+        <div className="font-semibold text-[14px] text-gray-700 mt-0.5">
+          for {card.country} Citizens
+        </div>
+        <div className="text-[12px] text-gray-500 mt-1">
+          {supportingLine(card.category)}
+        </div>
+      </div>
+
+      {/* 3) Requirements card — title must never contain a year */}
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+      >
+        <div className="px-4 pt-3 pb-2 font-bold text-[13px] text-gray-900">
+          Travel Requirements for Turkey:
+        </div>
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
+            <span className="text-[13px] text-gray-500">Passport validity</span>
+            <span className="text-[13px] font-semibold text-gray-900">Minimum 180 days</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2.5 gap-3" style={{ borderTop: '1px solid #eef1f5' }}>
+            <span className="text-[13px] text-gray-500 shrink-0">Maximum stay</span>
+            <span className="text-[13px] font-semibold text-gray-900 text-right min-w-0 break-words">{maxStayText(card)}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid #eef1f5' }}>
+            <span className="text-[13px] text-gray-500">Insurance</span>
+            <span
+              className="text-[12px] font-bold px-2.5 py-0.5 rounded-full"
+              style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}
+            >
+              Required
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VisaCard({ card }: { card: VisaCardData }) {
   const isEvisa = card.category === 'evisa_direct';
   const ctaHref = card.cta_href;
@@ -692,6 +799,8 @@ export default function VisaChat() {
                   </div>
                 </div>
               )}
+              {/* Top block first, then category content, then CTAs */}
+              {msg.card && <CountryTopBlock card={msg.card} />}
               {msg.card && <VisaCard card={msg.card} />}
               {msg.optionCards && msg.optionCards.length > 0 && (
                 <div className="mt-2 ml-10">
