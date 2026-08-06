@@ -100,8 +100,6 @@ const CONDITIONAL_DEFAULTS: Partial<RawCountry> = {
     "Travel insurance is mandatory",
     "Apply here — no external redirects",
   ],
-  price_label: "Next step: verify eligibility + apply",
-  price_example: "Tap APPLY NOW to continue.",
   cta: "APPLY NOW",
   cta_href: "/next",
 };

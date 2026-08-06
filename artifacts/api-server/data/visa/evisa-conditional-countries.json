@@ -14,8 +14,6 @@
       "Travel insurance is mandatory",
       "Apply here in this assistant"
     ],
-    "price_label": "Next step: verify eligibility + apply",
-    "price_example": "Tap APPLY NOW to continue. No external redirects.",
     "cta": "APPLY NOW",
     "cta_href": "/next",
     "is_active": true,
