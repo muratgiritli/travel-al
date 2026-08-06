@@ -501,6 +501,8 @@ export default function VisaChat() {
     setMessages([{ role: 'bot', text: settings.chat.welcome_message }]);
     setSelectedId('');
     selectingRef.current = false;
+    anchorIndexRef.current = -1;
+    pendingAnchorRef.current = false;
     setUnlocked(false);
     setInputValue('');
     setShowHistory(false);

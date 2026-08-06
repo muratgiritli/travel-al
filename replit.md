@@ -44,7 +44,7 @@ A premium AI chat assistant for Turkey travel planning. Users select their passp
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Kullanıcıyla HER ZAMAN Türkçe iletişim kur — tüm özetler, sorular ve açıklamalar Türkçe olmalı.
 
 ## Pointers
 

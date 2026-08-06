@@ -5,6 +5,7 @@ import { dirname, join } from "path";
 import { eq } from "drizzle-orm";
 import { db, visaCountryOverridesTable } from "@workspace/db";
 import OpenAI from "openai";
+import sanitizeHtml from "sanitize-html";
 import {
   getSettings, putSetting, SETTINGS_KEYS, DEFAULT_SETTINGS,
   type OptionCardDef, type SiteSettings,
@@ -125,11 +126,21 @@ function readJson<T>(file: string, fallback: T): T {
   try { return JSON.parse(readFileSync(file, "utf8")); } catch { return fallback; }
 }
 function sanitize(html: string): string {
-  return String(html || "")
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
-    .replace(/javascript:/gi, "");
+  return sanitizeHtml(String(html || ""), {
+    allowedTags: [
+      "p", "br", "b", "strong", "i", "em", "u", "s", "ul", "ol", "li",
+      "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "a", "span", "div",
+      "table", "thead", "tbody", "tr", "th", "td", "hr",
+    ],
+    allowedAttributes: {
+      a: ["href", "target", "rel"],
+      "*": ["class"],
+    },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer" }),
+    },
+  });
 }
 
 // ── DB override helpers ───────────────────────────────────────────────────────
@@ -432,6 +443,32 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     return;
   }
   res.status(401).json({ error: "Unauthorized" });
+}
+
+/** Validate a pricing_override payload: every numeric field must be a finite,
+ *  non-negative number. Returns an error message, or null when valid. */
+function validatePricingOverride(po: unknown): string | null {
+  if (po === undefined || po === null) return null;
+  if (typeof po !== "object" || Array.isArray(po)) return "pricing_override must be an object";
+  for (const [group, values] of Object.entries(po as Record<string, unknown>)) {
+    if (values === undefined || values === null) continue;
+    if (typeof values !== "object" || Array.isArray(values)) return `pricing_override.${group} must be an object`;
+    for (const [key, val] of Object.entries(values as Record<string, unknown>)) {
+      if (val === undefined || val === null) continue;
+      if (key === "currency") {
+        if (typeof val !== "string" || !/^[A-Za-z]{3}$/.test(val)) {
+          return `pricing_override.${group}.currency must be a 3-letter currency code`;
+        }
+        continue;
+      }
+      const n = typeof val === "number" ? val : Number(val);
+      if (typeof val === "boolean" || !Number.isFinite(n) || n < 0) {
+        return `pricing_override.${group}.${key} must be a non-negative number (got "${String(val)}")`;
+      }
+      (values as Record<string, unknown>)[key] = n;
+    }
+  }
+  return null;
 }
 
 // ── Pricing / option-card resolution ─────────────────────────────────────────
@@ -823,6 +860,11 @@ router.put("/travel/admin/countries/:id", requireAdmin, async (req, res) => {
         oc.price = n;
       }
     }
+    // Validate pricing overrides (finite, non-negative numbers only)
+    {
+      const perr = validatePricingOverride(body.pricing_override);
+      if (perr) { res.status(400).json({ error: perr }); return; }
+    }
     // Never allow a year to be saved into the requirements title
     if (typeof body.requirements_title === "string") body.requirements_title = stripYear(body.requirements_title);
 
@@ -868,6 +910,23 @@ router.post("/travel/admin/countries", requireAdmin, async (req, res) => {
     if (!name) { res.status(400).json({ error: "name is required" }); return; }
     const id = String(body.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
     if (await getCountry(id)) { res.status(409).json({ error: "Country already exists" }); return; }
+
+    {
+      const perr = validatePricingOverride(body.pricing_override);
+      if (perr) { res.status(400).json({ error: perr }); return; }
+    }
+    if (Array.isArray(body.option_cards)) {
+      for (const oc of body.option_cards as Array<Record<string, unknown>>) {
+        if (oc.price === undefined || oc.price === null || oc.price === "") continue;
+        const n = Number(oc.price);
+        if (!Number.isFinite(n) || n < 0) {
+          res.status(400).json({ error: `Option card price must be a number (got "${oc.price}")` });
+          return;
+        }
+        oc.price = n;
+      }
+    }
+    if (typeof body.requirements_title === "string") body.requirements_title = stripYear(body.requirements_title);
 
     const extra: Record<string, unknown> = { name };
     for (const f of EXTRA_FIELDS) if (body[f] !== undefined) extra[f] = body[f];
