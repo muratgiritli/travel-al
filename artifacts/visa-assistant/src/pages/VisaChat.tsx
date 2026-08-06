@@ -464,7 +464,17 @@ export default function VisaChat() {
     });
   }, [settings.chat.welcome_message]);
 
+  // When a country result renders, anchor the scroll to the passport line
+  // (start of the new result) instead of jumping to the very bottom.
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const anchorIndexRef = useRef(-1);
+  const pendingAnchorRef = useRef(false);
+
   useEffect(() => {
+    if (pendingAnchorRef.current && anchorRef.current) {
+      anchorRef.current.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return; // keep the passport line near the top; do NOT force-scroll to bottom
+    }
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages, loading]);
 
@@ -581,7 +591,14 @@ export default function VisaChat() {
     // ALL categories stay in chat on "/" — no navigation on country select.
     // NO AI-generated intro bubble: the result is admin-managed content only
     // (top block → card → option cards → CTAs).
-    addMsg({ role: 'user', text: `I have a ${country.name} passport.` });
+    const article = /^[aeiou]/i.test(country.name) ? 'an' : 'a';
+    // Anchor scrolling to this passport line (start of the new result)
+    setMessages(prev => {
+      anchorIndexRef.current = prev.length;
+      return prev;
+    });
+    pendingAnchorRef.current = true;
+    addMsg({ role: 'user', text: `I have ${article} ${country.name} passport.` });
     addMsg({ role: 'system', text: `Passport selected: ${country.name}` });
     setUnlocked(true);
     setLoading(true);
@@ -618,6 +635,8 @@ export default function VisaChat() {
     const text = inputValue.trim();
     if (!text || !selectedId) return;
     setInputValue('');
+    // Typed follow-ups resume normal scroll-to-bottom behavior
+    pendingAnchorRef.current = false;
 
     // Snapshot history before adding new user message (for context)
     const historySnapshot = messages.filter(m => m.role === 'user' || m.role === 'bot');
@@ -742,7 +761,7 @@ export default function VisaChat() {
           style={{ background: '#f4f6f9' }}
         >
           {messages.map((msg, i) => (
-            <div key={i}>
+            <div key={i} ref={i === anchorIndexRef.current ? anchorRef : undefined}>
               {msg.role === 'system' && (
                 <div className="text-center text-[12px] text-gray-400 my-1 font-medium">{msg.text}</div>
               )}
