@@ -78,7 +78,10 @@ export default function AskAIDrawer({ countryId, countryName }: { countryId: str
             className="fixed left-0 right-0 z-50 flex flex-col rounded-t-2xl shadow-2xl"
             style={{
               bottom: aboveNav,
-              height: 'min(60dvh, 480px)',
+              // 45–60% of viewport: top edge stays in the lower half of the screen
+              height: 'min(52dvh, 480px)',
+              minHeight: '45dvh',
+              maxHeight: '60dvh',
               background: '#fff',
               borderTop: '1px solid #e5e7eb',
               animation: 'askai-slide-up .25s ease-out',
