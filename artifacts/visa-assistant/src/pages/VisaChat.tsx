@@ -178,7 +178,6 @@ function CountryTopBlock({ card }: { card: VisaCardData }) {
 
 function VisaCard({ card }: { card: VisaCardData }) {
   const isEvisa = card.category === 'evisa_direct';
-  const ctaHref = card.cta_href;
 
   return (
     <div
@@ -259,25 +258,7 @@ function VisaCard({ card }: { card: VisaCardData }) {
         </div>
       )}
 
-      {/* CTA */}
-      <a
-        href={ctaHref}
-        className="block w-full text-center py-3 rounded-xl font-semibold text-[14px] text-white transition-colors mb-1"
-        style={{ background: isEvisa ? '#1d4ed8' : '#0a1f44' }}
-      >
-        {card.cta}
-      </a>
-
-      {isEvisa && (
-        <p className="text-center text-[11px] text-gray-400 mt-1">
-          Internal application portal — no redirect to external sites
-        </p>
-      )}
-      {!isEvisa && (
-        <p className="text-center text-[11px] text-gray-400 mt-1">
-          Instant PDF • Border-ready • Cancel anytime
-        </p>
-      )}
+      {/* CTA intentionally removed — this card is informational only */}
 
       {/* Admin HTML notes */}
       {card.admin_html_notes && (
