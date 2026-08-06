@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS = {
     welcome_message: "Which country issued your passport?",
     passport_selected_message: "Passport selected.",
     insurance_required_message: "Travel health insurance is mandatory for the full duration of your stay.",
-    bottom_disclaimer: "AI guidance • Human travel experts available.",
+    bottom_disclaimer: "AI travel assistant • Human experts available",
     faq_text: "Frequently asked questions about travelling to Türkiye.",
     track_text: "Track your application status here.",
     contact_text: "Contact our travel experts — we reply within 24 hours.",

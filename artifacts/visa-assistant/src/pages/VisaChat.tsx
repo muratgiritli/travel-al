@@ -838,8 +838,8 @@ export default function VisaChat() {
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                   disabled={!unlocked}
-                  placeholder={unlocked ? 'Ask about insurance, stay length, documents…' : 'Select your passport country above first…'}
-                  className="flex-1 bg-transparent outline-none text-[14px] text-gray-800 placeholder:text-gray-400"
+                  placeholder={unlocked ? 'How can I help with your trip to Türkiye?' : 'Select your passport country above first…'}
+                  className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-gray-800 placeholder:text-gray-400 placeholder:text-[13px]"
                 />
               </div>
               <button
