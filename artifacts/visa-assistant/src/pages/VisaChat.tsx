@@ -574,14 +574,14 @@ export default function VisaChat() {
     // ALL categories stay in chat on "/" — no navigation on country select.
     // NO AI-generated intro bubble: the result is admin-managed content only
     // (top block → card → option cards → CTAs).
-    const article = /^[aeiou]/i.test(country.name) ? 'an' : 'a';
-    // Anchor scrolling to this passport line (start of the new result)
+    // NO fake user bubble either — the user already selected the country;
+    // only a short system confirmation, then the result immediately.
+    // Anchor scrolling to the confirmation line (start of the new result)
     setMessages(prev => {
       anchorIndexRef.current = prev.length;
       return prev;
     });
     pendingAnchorRef.current = true;
-    addMsg({ role: 'user', text: `I have ${article} ${country.name} passport.` });
     addMsg({ role: 'system', text: `Passport selected: ${country.name}` });
     setUnlocked(true);
     setLoading(true);
