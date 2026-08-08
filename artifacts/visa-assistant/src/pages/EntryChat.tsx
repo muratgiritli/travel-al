@@ -6,6 +6,7 @@ import StickerApplyForm from '@/components/StickerApplyForm';
 import ServiceHub, { type ServiceId } from '@/components/ServiceHub';
 import EsimPlans from '@/components/EsimPlans';
 import InsuranceInfo from '@/components/InsuranceInfo';
+import InsuranceExemptLanding from '@/components/InsuranceExemptLanding';
 import TrustFaq from '@/components/TrustFaq';
 import SiteFooter from '@/components/SiteFooter';
 import type { ContentSettings, OptionCard } from '@/lib/settings';
@@ -1023,32 +1024,44 @@ export default function EntryChat() {
                             {t('chat.backToServices')}
                           </button>
                         )}
-                        <InsuranceInfo
-                          dailyPrice={settings.pricing.insurance.daily_price}
-                          minDays={settings.pricing.insurance.min_days || 1}
-                          copy={site.insurance}
-                          freeEntry={
-                            locCard?.category === WIRE_CAT.entryFree
-                              ? {
-                                  headline: locCard.headline,
-                                  body: locCard.body,
-                                  features: locCard.features,
-                                }
-                              : null
-                          }
-                          onFormVisibilityChange={(open) => {
-                            setInsuranceFormOpen(open);
-                            if (open) {
-                              pendingServiceScrollRef.current = true;
-                              window.setTimeout(() => {
-                                if (servicePanelRef.current) {
-                                  pendingServiceScrollRef.current = false;
-                                  scrollChatToEl(servicePanelRef.current);
-                                }
-                              }, 60);
-                            }
-                          }}
-                        />
+                        {locCard?.category === WIRE_CAT.entryFree ? (
+                          <InsuranceExemptLanding
+                            country={locCard.country}
+                            flagEmoji={locCard.flag_emoji}
+                            dailyPrice={settings.pricing.insurance.daily_price}
+                            minDays={settings.pricing.insurance.min_days || 1}
+                            onFormVisibilityChange={(open) => {
+                              setInsuranceFormOpen(open);
+                              if (open) {
+                                pendingServiceScrollRef.current = true;
+                                window.setTimeout(() => {
+                                  if (servicePanelRef.current) {
+                                    pendingServiceScrollRef.current = false;
+                                    scrollChatToEl(servicePanelRef.current);
+                                  }
+                                }, 60);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <InsuranceInfo
+                            dailyPrice={settings.pricing.insurance.daily_price}
+                            minDays={settings.pricing.insurance.min_days || 1}
+                            copy={site.insurance}
+                            onFormVisibilityChange={(open) => {
+                              setInsuranceFormOpen(open);
+                              if (open) {
+                                pendingServiceScrollRef.current = true;
+                                window.setTimeout(() => {
+                                  if (servicePanelRef.current) {
+                                    pendingServiceScrollRef.current = false;
+                                    scrollChatToEl(servicePanelRef.current);
+                                  }
+                                }, 60);
+                              }
+                            }}
+                          />
+                        )}
                       </motion.div>
                     )}
 

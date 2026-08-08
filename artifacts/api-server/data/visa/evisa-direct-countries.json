@@ -91,8 +91,32 @@
       "name_tr": "Güney Afrika",
       "iso2": "ZA",
       "flag_emoji": "🇿🇦",
-      "visa_summary": "e-Visa • fee-free",
-      "stay_rule": "South African ordinary passport holders can obtain a fee-free e-Visa for Türkiye."
+      "visa_summary": "e-Visa • fee-free • 30 days single entry",
+      "fee_free": true,
+      "max_stay_text": "30 days, single entry",
+      "headline": "Zero Government Fee",
+      "stay_rule": "Completely free for South African passport holders. Online e-Permit for tourism and business — up to 30 days, single entry.",
+      "features": [
+        "Holiday: Tourism and family visits",
+        "Business: Meetings and trade events",
+        "Present a printed PDF copy at the airport in Turkey"
+      ],
+      "option_cards": [
+        {
+          "id": "direct",
+          "title": "Get a Turkey e-Permit",
+          "description": "Zero government fee for South African passport holders.",
+          "price": 0,
+          "sort": 1,
+          "active": true,
+          "cta_label": "CONTINUE",
+          "cta_href": "/next",
+          "bullets": [
+            "e-Permit and travel information delivered by email.",
+            "You must present a printed PDF copy at the airport in Turkey."
+          ]
+        }
+      ]
     },
     {
       "id": "hk-bno",
@@ -147,8 +171,32 @@
       "name_tr": "Meksika",
       "iso2": "MX",
       "flag_emoji": "🇲🇽",
-      "visa_summary": "e-Visa • 30 days single entry (fee-free)",
-      "stay_rule": "Mexican ordinary passport holders can obtain a fee-free 30-day single-entry e-Visa for Türkiye (90-day multiple-entry visas available via missions)."
+      "visa_summary": "e-Visa • fee-free • 30 days single entry",
+      "fee_free": true,
+      "max_stay_text": "30 days, single entry",
+      "headline": "Zero Government Fee",
+      "stay_rule": "Completely free for Mexican passport holders. Online e-Permit for tourism and business — up to 30 days, single entry.",
+      "features": [
+        "Holiday: Tourism and family visits",
+        "Business: Meetings and trade events",
+        "Present a printed PDF copy at the airport in Turkey"
+      ],
+      "option_cards": [
+        {
+          "id": "direct",
+          "title": "Get a Turkey e-Permit",
+          "description": "Zero government fee for Mexican passport holders.",
+          "price": 0,
+          "sort": 1,
+          "active": true,
+          "cta_label": "CONTINUE",
+          "cta_href": "/next",
+          "bullets": [
+            "e-Permit and travel information delivered by email.",
+            "You must present a printed PDF copy at the airport in Turkey."
+          ]
+        }
+      ]
     },
     {
       "id": "na",

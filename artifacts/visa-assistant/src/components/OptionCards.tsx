@@ -207,7 +207,7 @@ export function OptionCardView({
             className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-4 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
             style={{ background: `linear-gradient(135deg, ${BTN}, ${BTN_DARK})` }}
           >
-            {t('option.applyNow')}
+            {loc.id === 'direct' && loc.price === 0 ? t('common.continue') : t('option.applyNow')}
           </button>
         ) : (
           applyEnabled ? (
@@ -216,7 +216,7 @@ export function OptionCardView({
               className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-4 transition-opacity hover:opacity-90"
               style={{ background: `linear-gradient(135deg, ${BTN}, ${BTN_DARK})` }}
             >
-              {t('option.applyNow')}
+              {loc.id === 'direct' && loc.price === 0 ? t('common.continue') : t('option.applyNow')}
             </a>
           ) : (
             <button
@@ -225,7 +225,7 @@ export function OptionCardView({
               className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-4 opacity-40 cursor-not-allowed"
               style={{ background: `linear-gradient(135deg, ${BTN}, ${BTN_DARK})` }}
             >
-              {t('option.applyNow')}
+              {loc.id === 'direct' && loc.price === 0 ? t('common.continue') : t('option.applyNow')}
             </button>
           )
         )}

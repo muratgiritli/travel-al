@@ -5,11 +5,13 @@ import type { LangCode } from './types';
 
 type EntryLike = {
   country: string;
+  iso2?: string;
   category: WireCategory;
   headline: string;
   body: string[];
   features: string[];
   insurance_required?: boolean;
+  fee_free?: boolean;
   top_block?: {
     max_stay_text?: string;
     passport_validity_text?: string;
@@ -41,7 +43,29 @@ export function localizeEntryCard<T extends EntryLike>(card: T, lang: LangCode):
   let body0 = card.body?.[0] || '';
   let features = card.features || [];
 
-  if (pack) {
+  const iso = String(card.iso2 || '').toUpperCase();
+  const feeFree = !!card.fee_free;
+
+  if (iso === 'CN' && pack === 'free') {
+    // evisacity.com/china — visa-exempt + border insurance pitch
+    headline = t(lang, 'card.cn.headline');
+    body0 = t(lang, 'card.cn.body');
+    features = [
+      t(lang, 'card.cn.f1'),
+      t(lang, 'card.cn.f2'),
+      t(lang, 'card.cn.f3'),
+      t(lang, 'card.cn.f4'),
+    ];
+  } else if (feeFree && pack === 'direct') {
+    // evisacity Mexico / South Africa — zero government fee e-Permit
+    headline = t(lang, 'card.directFree.headline');
+    body0 = t(lang, 'card.directFree.body', { country });
+    features = [
+      t(lang, 'card.directFree.f1'),
+      t(lang, 'card.directFree.f2'),
+      t(lang, 'card.directFree.f3'),
+    ];
+  } else if (pack) {
     headline = t(lang, `card.${pack}.headline`);
     body0 = t(lang, `card.${pack}.body`, { country });
     features = [
@@ -84,11 +108,15 @@ export function localizeEntryCard<T extends EntryLike>(card: T, lang: LangCode):
   };
 }
 
-/** Localize a stay snippet like "90 days" / "90 Days, Multiple Entry". */
+/** Localize a stay snippet like "90 days" / "90 Days, Multiple Entry" / "90 days / 180". */
 export function localizeStaySnippet(raw: string, lang: LangCode): string {
   const s = (raw || '').trim();
   if (!s) return s;
-  const m = s.match(/(\d+)\s*days?\b(?:\s*,?\s*(single|multiple)\s*entry)?/i);
+  const slash = s.match(/^(\d+)\s*days?\s*\/\s*(\d+)\s*$/i);
+  if (slash) {
+    return t(lang, 'card.nDaysSlash', { n: slash[1], period: slash[2] });
+  }
+  const m = s.match(/(\d+)\s*days?\b(?:\s*[,()]?\s*(single|multiple)\s*entry)?/i);
   if (!m) return s;
   const n = m[1];
   const entryKind = (m[2] || '').toLowerCase();
@@ -123,7 +151,7 @@ type OptPack = {
   bullets?: string[];
 };
 
-function optionPack(id: string, lang: LangCode): OptPack | null {
+function optionPack(id: string, lang: LangCode, card?: OptionCard): OptPack | null {
   switch (id) {
     case 'resident':
       return {
@@ -150,6 +178,14 @@ function optionPack(id: string, lang: LangCode): OptPack | null {
         description: t(lang, 'opt.sticker.desc'),
         bullets: [t(lang, 'opt.sticker.bullet')],
       };
+    case 'direct':
+      return {
+        title: t(lang, 'opt.ePermit.title'),
+        description: (card?.price ?? 60) === 0
+          ? t(lang, 'opt.directFree.desc')
+          : t(lang, 'opt.direct.desc'),
+        bullets: [t(lang, 'opt.direct.bullet'), t(lang, 'opt.direct.bulletPrint')],
+      };
     case 'age-direct':
       return {
         title: t(lang, 'opt.ePermit.title'),
@@ -170,7 +206,7 @@ function optionPack(id: string, lang: LangCode): OptPack | null {
 
 /** Localize option card title/description/bullets/tags/age copy by stable id. */
 export function localizeOptionCard(card: OptionCard, lang: LangCode): OptionCard {
-  const pack = optionPack(card.id || '', lang);
+  const pack = optionPack(card.id || '', lang, card);
   if (!pack) {
     return {
       ...card,

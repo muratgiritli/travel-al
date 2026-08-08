@@ -400,6 +400,7 @@ function buildCard(country: Awaited<ReturnType<typeof getCountry>>) {
     category: country.category,
     visa_status: (country as { visa_summary?: string }).visa_summary || "",
     insurance_required: !!(country as { insurance_required?: boolean }).insurance_required,
+    fee_free: !!(country as { fee_free?: boolean }).fee_free,
     headline: (country as { headline?: string }).headline || "",
     body: [
       (country as { stay_rule?: string }).stay_rule || "",

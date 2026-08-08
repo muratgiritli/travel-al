@@ -200,8 +200,16 @@
       "iso2": "CN",
       "flag_emoji": "🇨🇳",
       "visa_summary": "Visa exempt • 90 days / 180",
-      "stay_rule": "As of 2 January 2026, Chinese ordinary passport holders can enter Türkiye visa-free for up to 90 days within any 180-day period.",
-      "ai_extra_context": "Visa exemption for ordinary Chinese passports started on 2 January 2026."
+      "max_stay_text": "90 days / 180",
+      "headline": "You are exempt from a visa — 90 days",
+      "stay_rule": "Most Chinese travelers assume their domestic plan works abroad. It doesn't. Turkish border law requires valid foreign health coverage — and authorities verify it at the gate.",
+      "features": [
+        "Turkish Law compliant",
+        "Instant digital PDF policy",
+        "Coverage for all Turkish hospitals",
+        "Valid for tourism, business, or transit"
+      ],
+      "ai_extra_context": "Visa exemption for ordinary Chinese passports started on 2 January 2026. Product page focuses on mandatory travel health insurance at the border."
     },
     {
       "id": "dk",

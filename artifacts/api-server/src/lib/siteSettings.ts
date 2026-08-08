@@ -239,7 +239,21 @@ export const DEFAULT_SETTINGS = {
       { id: "consultancy", title: "Get a Turkey Entry Permit", description: "If you do not qualify for an online e-Permit option:", condition: "", eligible_tags: ["Document preparation", "Embassy appointment", "Form & biometric support", "Application tracking"], price: 20, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you do not qualify for an online e-Permit, our consultancy supports a Turkey entry permit through the embassy / consulate sticker process. We guide you on documents, appointments, forms and biometrics. Application details and next steps are sent to your email."] },
       { id: "gcc", title: "Get a Turkey Entry Permit", description: "If you have a valid residence permit to any of the following countries:", condition: "", eligible_tags: ["AE UAE", "SA Saudi Arabia", "QA Qatar", "KW Kuwait", "OM Oman", "BH Bahrain"], price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Citizens holding a valid residence permit from one of the following countries are eligible to apply for a Turkey entry permit for holiday purposes. This streamlines the process, offering a 30-day stay in Turkey. Your application and information details will be sent to your email address within the same day."] },
     ] as OptionCardDef[],
-    evisa_direct: [] as OptionCardDef[],
+    evisa_direct: [
+      {
+        id: "direct",
+        title: "Get a Turkey e-Permit",
+        description: "Online e-Permit for your passport — apply here in the assistant.",
+        price: 60,
+        sort: 1,
+        active: true,
+        cta_label: "APPLY NOW",
+        cta_href: "/next",
+        bullets: [
+          "Your Turkey e-Permit and travel information will be delivered directly to your email. Depending on the processing speed chosen, delivery occurs between 60 minutes and 7 days.",
+        ],
+      },
+    ] as OptionCardDef[],
     visa_exempt: [] as OptionCardDef[],
   },
   esim: {

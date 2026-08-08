@@ -15,6 +15,8 @@ type RawCountry = {
   visa_summary?: string;
   stay_rule?: string;
   insurance_required?: boolean;
+  fee_free?: boolean;
+  max_stay_text?: string;
   headline?: string;
   features?: string[];
   price_label?: string;
@@ -24,6 +26,7 @@ type RawCountry = {
   category?: string;
   is_active?: boolean;
   age_bands?: AgeBand[];
+  option_cards?: OptionCardDef[];
 };
 
 function readJson(filePath: string) {
@@ -65,7 +68,7 @@ function buildCard(country: RawCountry) {
       support_line: country.visa_summary || '',
       requirements_title: 'Travel Requirements for Turkey:',
       passport_validity_text: 'Minimum 180 days',
-      max_stay_text: 'See details below',
+      max_stay_text: country.max_stay_text || 'See details below',
       insurance_label: country.insurance_required === false ? 'Optional' : 'Required',
     },
     country: country.name,
@@ -74,6 +77,7 @@ function buildCard(country: RawCountry) {
     category: country.category,
     visa_status: country.visa_summary || '',
     insurance_required: country.insurance_required !== false,
+    fee_free: !!country.fee_free,
     headline: country.headline || 'Travel insurance is required for your stay',
     body: [
       country.stay_rule || '',
@@ -265,7 +269,21 @@ const OPTION_CARD_DEFAULTS: Record<string, OptionCardDef[]> = {
       ],
     },
   ],
-  evisa_direct: [],
+  evisa_direct: [
+    {
+      id: 'direct',
+      title: 'Get a Turkey e-Permit',
+      description: 'Online e-Permit for your passport — apply here in the assistant.',
+      price: 60,
+      sort: 1,
+      active: true,
+      cta_label: 'APPLY NOW',
+      cta_href: '/next',
+      bullets: [
+        'Your Turkey e-Permit and travel information will be delivered directly to your email. Depending on the processing speed chosen, delivery occurs between 60 minutes and 7 days.',
+      ],
+    },
+  ],
   visa_exempt: [],
 };
 
@@ -286,7 +304,8 @@ function enrichAgeDirectCard(card: OptionCardDef, country: RawCountry): OptionCa
 
 function optionCardsFor(country: RawCountry): OptionCardDef[] {
   const category = String(country.category || '');
-  const cards = OPTION_CARD_DEFAULTS[category] || [];
+  const own = country.option_cards;
+  const cards = own && own.length > 0 ? own : OPTION_CARD_DEFAULTS[category] || [];
   return cards
     .filter((c) => c.active !== false)
     .sort((a, b) => a.sort - b.sort)
