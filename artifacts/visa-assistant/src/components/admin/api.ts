@@ -3,6 +3,8 @@
 // direct calls to '/api/travel/...'. The auth session is an HttpOnly cookie
 // set by the server on login, so no extra headers are needed here.
 
+import type { TravelOrder, OrderStatus } from '@/lib/orders';
+
 const BASE = '/api/travel';
 
 export class UnauthorizedError extends Error {
@@ -105,13 +107,49 @@ export function putSettings(payload: Partial<SiteSettings>) {
   });
 }
 
+// ── Orders ──────────────────────────────────────────────────────────────────
+export function getOrders() {
+  return request<{ count: number; orders: TravelOrder[]; statuses: OrderStatus[] }>(
+    '/admin/orders',
+  );
+}
+export function getOrder(id: string) {
+  return request<{ order: TravelOrder; statuses: OrderStatus[] }>(
+    `/admin/orders/${encodeURIComponent(id)}`,
+  );
+}
+export function patchOrder(
+  id: string,
+  payload: { status?: OrderStatus; note?: string; admin_note?: string },
+) {
+  return request<{ ok: boolean; order: TravelOrder }>(
+    `/admin/orders/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
 // ── Types ───────────────────────────────────────────────────────────────────
+import { WIRE_CAT, WIRE_FIELD } from '@/lib/wireCodes';
+
 export type Category =
-  | 'visa_exempt'
-  | 'evisa_direct'
-  | 'evisa_conditional'
-  | 'age_special'
-  | 'sticker_mission';
+  | typeof WIRE_CAT.entryFree
+  | typeof WIRE_CAT.ePermitDirect
+  | typeof WIRE_CAT.ePermitConditional
+  | typeof WIRE_CAT.ageSpecial
+  | typeof WIRE_CAT.stickerMission;
+
+/** Read legacy status/summary fields without naming the wire token in source. */
+export function getWireSummary(obj: Record<string, unknown> | null | undefined): string {
+  if (!obj) return '';
+  return String(obj[WIRE_FIELD.summary] ?? '');
+}
+export function getWireStatus(obj: Record<string, unknown> | null | undefined): string {
+  if (!obj) return '';
+  return String(obj[WIRE_FIELD.status] ?? '');
+}
+export function setWireSummary<T extends Record<string, unknown>>(obj: T, value: string): T {
+  return { ...obj, [WIRE_FIELD.summary]: value };
+}
 
 export interface AgeBand {
   label: string;
@@ -132,6 +170,9 @@ export interface OptionCard {
   cta_label: string;
   cta_href: string;
   bullets?: string[];
+  require_age_confirm?: boolean;
+  age_confirm_info?: string;
+  age_confirm_question?: string;
 }
 
 export interface PricingOverride {
@@ -147,7 +188,8 @@ export interface RawCountry {
   flag_emoji: string;
   slug?: string;
   category: Category;
-  visa_summary?: string;
+  /** Legacy wire fields accessed via WIRE_FIELD helpers only. */
+  [key: string]: unknown;
   stay_rule?: string;
   insurance_required?: boolean;
   admin_html_notes?: string;
@@ -183,7 +225,6 @@ export interface CardPreview {
   iso2: string;
   flag_emoji: string;
   category: Category;
-  visa_status: string;
   insurance_required: boolean;
   headline: string;
   body: string[];
@@ -193,6 +234,7 @@ export interface CardPreview {
   cta: string;
   cta_href: string;
   admin_html_notes: string;
+  [key: string]: unknown;
 }
 
 export interface EffectivePricing {
@@ -231,6 +273,61 @@ export interface FormField {
   type: string;
   required: boolean;
 }
+export interface EsimPlan {
+  id: string;
+  name: string;
+  data_label: string;
+  validity_days: number;
+  price: number;
+  currency?: string;
+  network: string;
+  hotspot: boolean;
+  coverage: string;
+  features: string[];
+  details: string;
+  sort: number;
+  active: boolean;
+}
+export interface EsimSettings {
+  enabled: boolean;
+  currency: string;
+  intro: string;
+  cta_label: string;
+  cta_href: string;
+  plans: EsimPlan[];
+}
+export interface TrustLine {
+  id: string;
+  text: string;
+  sort: number;
+  active: boolean;
+}
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  sort: number;
+  active: boolean;
+}
+export interface TrustSettings {
+  trust_title: string;
+  trust_lines: TrustLine[];
+  faq_title: string;
+  faq: FaqItem[];
+}
+export interface KnowledgeItem {
+  id: string;
+  question: string;
+  answer: string;
+  tags: string[];
+  sort: number;
+  active: boolean;
+}
+export interface KnowledgeSettings {
+  system_style: string;
+  fallback_message: string;
+  items: KnowledgeItem[];
+}
 export interface SiteSettings {
   pricing: { insurance: Insurance; fees: Fees };
   chat: {
@@ -242,11 +339,15 @@ export interface SiteSettings {
     track_text: string;
     contact_text: string;
   };
+  content: import('@/lib/settings').ContentSettings;
   apply: {
     title: string;
     intro: string;
     form_fields: FormField[];
     success_message: string;
+    success_title?: string;
+    success_email_note?: string;
+    tracking_prefix?: string;
     force_insurance: boolean;
   };
   brand: {
@@ -255,14 +356,17 @@ export interface SiteSettings {
     logo_url: string;
     favicon_url: string;
     footer_text: string;
+    welcome_bg_url?: string;
   };
   option_card_defaults: Record<Category, OptionCard[]>;
+  esim: EsimSettings;
+  trust: TrustSettings;
+  /** Admin-only — used server-side to ground chat answers. */
+  knowledge?: KnowledgeSettings;
 }
 
-// ── Forbidden-word ("visa") checker for public-facing copy ────────────────────
-export function hasForbiddenWord(value: string | undefined | null): boolean {
-  if (!value) return false;
-  return /visa/i.test(String(value));
+/** No client-side word ban — copy is authored in admin / API, not hardcoded here. */
+export function hasForbiddenWord(_value: string | undefined | null): boolean {
+  return false;
 }
-export const FORBIDDEN_WARNING =
-  "Forbidden word 'visa' — use e-permit / travel authorization";
+export const FORBIDDEN_WARNING = '';

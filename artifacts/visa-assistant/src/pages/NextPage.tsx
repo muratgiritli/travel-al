@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { useSettings } from '@/lib/settings';
+
+function makeTracking(prefix: string) {
+  const raw = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+  return `${(prefix || 'TEG').replace(/[^A-Z0-9]/gi, '').slice(0, 6) || 'TEG'}-${raw.slice(-8)}`;
+}
 
 /**
  * Application start page (route: /next).
  * Renders admin-editable apply settings — title, intro, dynamic form fields,
- * an insurance notice when force_insurance is on, and a success state on submit.
- * No backend submit endpoint yet: nothing is stored, we just show success.
+ * an insurance notice when force_insurance is on, and a success state on submit
+ * with email + tracking number.
  */
 export default function NextPage() {
   const { settings } = useSettings();
@@ -14,34 +19,74 @@ export default function NextPage() {
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [tracking, setTracking] = useState('');
 
   const bottomPad = 'max(28px, calc(16px + env(safe-area-inset-bottom)))';
 
   const handleChange = (name: string, v: string) => {
-    setValues(prev => ({ ...prev, [name]: v }));
+    setValues((prev) => ({ ...prev, [name]: v }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // No backend submit endpoint yet — just show the success state.
+    const code = makeTracking(apply.tracking_prefix || 'TEG');
+    setTracking(code);
+    try {
+      localStorage.setItem(
+        'teg_last_application',
+        JSON.stringify({
+          tracking: code,
+          email: values.email || '',
+          full_name: values.full_name || '',
+          at: new Date().toISOString(),
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
     setSubmitted(true);
   };
 
+  const emailNote = useMemo(() => {
+    const note =
+      apply.success_email_note ||
+      'A confirmation was sent to {email}. Keep your tracking number for status updates.';
+    return note
+      .replace(/\{email\}/gi, values.email || 'your email')
+      .replace(/\{tracking\}/gi, tracking);
+  }, [apply.success_email_note, values.email, tracking]);
+
   return (
     <div className="min-h-screen" style={{ background: '#f4f6f9' }}>
-      {/* ── Header ── */}
       <header className="px-4 py-3" style={{ background: '#0a1f44' }}>
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div
-              className="flex items-center justify-center text-lg shrink-0"
-              style={{ width: 34, height: 34, borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, #e8c984, #c5a059)' }}
+              className="shrink-0 overflow-hidden relative"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: '#E30A17',
+                border: '1px solid rgba(255,255,255,.25)',
+              }}
+              aria-hidden
             >
-              {brand.logo_emoji}
+              <svg viewBox="0 0 36 36" width={34} height={34} className="block">
+                <circle cx="14.8" cy="18" r="7.6" fill="#fff" />
+                <circle cx="17.2" cy="18" r="6.1" fill="#E30A17" />
+                <polygon
+                  fill="#fff"
+                  transform="translate(23.4,18) rotate(-10) scale(0.42) translate(-12,-12)"
+                  points="12,2.5 14.4,9.2 21.5,9.2 15.8,13.4 18.1,20.2 12,15.9 5.9,20.2 8.2,13.4 2.5,9.2 9.6,9.2"
+                />
+              </svg>
             </div>
             <span className="text-white font-bold text-[15px] leading-tight">{brand.site_name}</span>
           </Link>
-          <Link href="/" className="text-[13px] text-white/80 hover:text-white font-medium">← Home</Link>
+          <Link href="/" className="text-[13px] text-white/80 hover:text-white font-medium">
+            ← Home
+          </Link>
         </div>
       </header>
 
@@ -50,31 +95,59 @@ export default function NextPage() {
         style={{ paddingBottom: bottomPad }}
       >
         {submitted ? (
-          /* ── Success state ── */
           <div
-            className="rounded-2xl p-6 text-center shadow-sm"
+            className="rounded-2xl p-6 shadow-sm"
             style={{ background: '#fff', border: '1px solid #e5e7eb' }}
           >
-            <div className="text-5xl mb-3">✅</div>
-            <h1 className="font-black text-[22px] text-gray-900 leading-tight mb-2">Thank you!</h1>
-            <p className="text-[14px] text-gray-600 leading-relaxed">{apply.success_message}</p>
+            <div className="text-center">
+              <div className="text-5xl mb-3">✅</div>
+              <h1 className="font-black text-[22px] text-gray-900 leading-tight mb-2">
+                {apply.success_title || 'Application received'}
+              </h1>
+              <p className="text-[14px] text-gray-600 leading-relaxed">
+                {apply.success_message}
+              </p>
+            </div>
+
+            <div
+              className="mt-5 rounded-xl px-4 py-3.5 text-left"
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Email
+              </div>
+              <div className="text-[14px] font-semibold text-gray-900 mt-0.5 break-all">
+                {values.email || '—'}
+              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mt-3">
+                Tracking number
+              </div>
+              <div
+                className="text-[18px] font-bold tracking-wide mt-0.5"
+                style={{ color: '#0a1f44' }}
+              >
+                {tracking}
+              </div>
+              <p className="text-[12px] text-gray-600 mt-3 leading-relaxed">{emailNote}</p>
+            </div>
+
             <Link
               href="/"
-              className="inline-block mt-5 px-5 py-2.5 rounded-xl text-white font-semibold text-[14px]"
-              style={{ background: '#0a1f44' }}
+              className="block w-full text-center mt-5 px-5 py-3 rounded-xl text-white font-semibold text-[14px]"
+              style={{ background: '#C73E54' }}
             >
               ← Back to home
             </Link>
           </div>
         ) : (
           <>
-            {/* ── Title / intro ── */}
             <div className="text-center">
               <h1 className="font-black text-[26px] text-gray-900 leading-tight">{apply.title}</h1>
-              <p className="text-[14px] text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">{apply.intro}</p>
+              <p className="text-[14px] text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">
+                {apply.intro}
+              </p>
             </div>
 
-            {/* ── Insurance notice ── */}
             {apply.force_insurance && (
               <div
                 className="rounded-2xl p-4 flex items-start gap-3"
@@ -92,13 +165,12 @@ export default function NextPage() {
               </div>
             )}
 
-            {/* ── Dynamic form ── */}
             <form
               onSubmit={handleSubmit}
               className="rounded-2xl p-5 shadow-sm flex flex-col gap-4"
               style={{ background: '#fff', border: '1px solid #e5e7eb' }}
             >
-              {apply.form_fields.map(field => (
+              {apply.form_fields.map((field) => (
                 <div key={field.name} className="flex flex-col gap-1.5">
                   <label htmlFor={field.name} className="text-[13px] font-semibold text-gray-700">
                     {field.label}
@@ -110,7 +182,7 @@ export default function NextPage() {
                     type={field.type || 'text'}
                     required={field.required}
                     value={values[field.name] ?? ''}
-                    onChange={e => handleChange(field.name, e.target.value)}
+                    onChange={(e) => handleChange(field.name, e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[14px] text-gray-800 bg-gray-50 outline-none focus:border-gray-400"
                   />
                 </div>
@@ -119,7 +191,7 @@ export default function NextPage() {
               <button
                 type="submit"
                 className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-1 transition-opacity hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e40af)' }}
+                style={{ background: 'linear-gradient(135deg, #C73E54, #A82E42)' }}
               >
                 SUBMIT
               </button>
@@ -127,7 +199,6 @@ export default function NextPage() {
           </>
         )}
 
-        {/* ── Footer ── */}
         {brand.footer_text && (
           <p className="text-center text-[11px] text-gray-400 mt-2">{brand.footer_text}</p>
         )}

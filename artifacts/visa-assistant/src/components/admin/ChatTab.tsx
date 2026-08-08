@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSettings, putSettings, SiteSettings, UnauthorizedError, hasForbiddenWord } from './api';
+import { clearSettingsCache } from '@/lib/settings';
 import { Button, Card, TextArea } from './ui';
 
 const FIELDS: { key: keyof SiteSettings['chat']; label: string }[] = [
@@ -42,6 +43,7 @@ export default function ChatTab({
     setSaving(true);
     try {
       await putSettings({ chat });
+      clearSettingsCache();
       onSaved();
     } catch (err) {
       if (err instanceof UnauthorizedError) onUnauthorized();

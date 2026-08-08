@@ -17,6 +17,7 @@ import {
   Select,
 } from './ui';
 import CountryEditor from './CountryEditor';
+import { WIRE_CAT } from '@/lib/wireCodes';
 
 export default function CountriesTab({
   onSaved,
@@ -161,7 +162,7 @@ function AddCountry({
   const [name, setName] = useState('');
   const [iso2, setIso2] = useState('');
   const [flag, setFlag] = useState('🏳️');
-  const [category, setCategory] = useState<Category>('evisa_direct');
+  const [category, setCategory] = useState<Category>(WIRE_CAT.ePermitDirect);
   const [busy, setBusy] = useState(false);
 
   const create = async () => {

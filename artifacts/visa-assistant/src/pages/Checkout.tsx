@@ -29,10 +29,25 @@ export default function Checkout() {
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div
-              className="flex items-center justify-center text-lg shrink-0"
-              style={{ width: 34, height: 34, borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, #e8c984, #c5a059)' }}
+              className="shrink-0 overflow-hidden relative"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: '#E30A17',
+                border: '1px solid rgba(255,255,255,.25)',
+              }}
+              aria-hidden
             >
-              {brand.logo_emoji}
+              <svg viewBox="0 0 36 36" width={34} height={34} className="block">
+                <circle cx="14.8" cy="18" r="7.6" fill="#fff" />
+                <circle cx="17.2" cy="18" r="6.1" fill="#E30A17" />
+                <polygon
+                  fill="#fff"
+                  transform="translate(23.4,18) rotate(-10) scale(0.42) translate(-12,-12)"
+                  points="12,2.5 14.4,9.2 21.5,9.2 15.8,13.4 18.1,20.2 12,15.9 5.9,20.2 8.2,13.4 2.5,9.2 9.6,9.2"
+                />
+              </svg>
             </div>
             <span className="text-white font-bold text-[15px] leading-tight">{brand.site_name}</span>
           </Link>
@@ -104,7 +119,7 @@ export default function Checkout() {
           <Link
             href="/next"
             className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl transition-opacity hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e40af)' }}
+            style={{ background: 'linear-gradient(135deg, #C73E54, #A82E42)' }}
           >
             CONTINUE
           </Link>

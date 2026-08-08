@@ -1,6 +1,8 @@
 import { createHmac, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { db, siteSettingsTable } from "@workspace/db";
+import { CONTENT_SEED, SCHENGEN_RESIDENCE_TAGS } from "./contentSeed";
+import { KNOWLEDGE_SEED } from "./knowledgeSeed";
 
 /* ────────────────────────────────────────────────────────────────────────────
  * Site settings store: key → JSON value persisted in Postgres,
@@ -20,7 +22,120 @@ export interface OptionCardDef {
   cta_label: string;
   cta_href: string; // internal only, e.g. /next or /apply/{slug}
   bullets?: string[];
+  require_age_confirm?: boolean;
+  age_confirm_info?: string;
+  age_confirm_question?: string;
 }
+
+/** Turkey eSIM plan — sample defaults inspired by esimsale.com Turkey packages. */
+export interface EsimPlanDef {
+  id: string;
+  name: string;
+  data_label: string;
+  validity_days: number;
+  price: number;
+  currency?: string;
+  network: string;
+  hotspot: boolean;
+  coverage: string;
+  features: string[];
+  details: string;
+  sort: number;
+  active: boolean;
+}
+
+const DEFAULT_ESIM_PLANS: EsimPlanDef[] = [
+  {
+    id: 'tr-1gb-7d',
+    name: 'Turkey 1 GB',
+    data_label: '1 GB',
+    validity_days: 7,
+    price: 4.5,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      'Kısa ziyaretler için ideal başlangıç paketi. Ödeme sonrası eSIM QR kodu e-posta ile iletilir; telefonunuzda birkaç dakikada aktif edilir.',
+    sort: 1,
+    active: true,
+  },
+  {
+    id: 'tr-2gb-15d',
+    name: 'Turkey 2 GB',
+    data_label: '2 GB',
+    validity_days: 15,
+    price: 6.5,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      '1–2 haftalık seyahatler için dengeli paket. Harita, mesajlaşma ve günlük kullanım için uygundur.',
+    sort: 2,
+    active: true,
+  },
+  {
+    id: 'tr-3gb-30d',
+    name: 'Turkey 3 GB',
+    data_label: '3 GB',
+    validity_days: 30,
+    price: 8.5,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      'Aylık geçerlilikli ekonomik paket. Orta düzey veri ihtiyacı olan gezginler için uygundur.',
+    sort: 3,
+    active: true,
+  },
+  {
+    id: 'tr-5gb-30d',
+    name: 'Turkey 5 GB',
+    data_label: '5 GB',
+    validity_days: 30,
+    price: 12,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      'Şehir + sahil turları için popüler seçenek. Sosyal medya ve navigasyon kullanımına rahat eder.',
+    sort: 4,
+    active: true,
+  },
+  {
+    id: 'tr-10gb-30d',
+    name: 'Turkey 10 GB',
+    data_label: '10 GB',
+    validity_days: 30,
+    price: 18,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      'Yoğun kullanım ve hotspot ihtiyacı için önerilir. Uzun tatillerde güvenli veri kotası sağlar.',
+    sort: 5,
+    active: true,
+  },
+  {
+    id: 'tr-20gb-30d',
+    name: 'Turkey 20 GB',
+    data_label: '20 GB',
+    validity_days: 30,
+    price: 26,
+    network: 'Turkcell',
+    hotspot: true,
+    coverage: 'Türkiye',
+    features: ['QR ile anında kurulum', 'LTE / 5G', 'Hotspot destekli'],
+    details:
+      'Yüksek veri ihtiyacı veya birden fazla cihaz paylaşımı için premium paket.',
+    sort: 6,
+    active: true,
+  },
+];
 
 export const DEFAULT_SETTINGS = {
   pricing: {
@@ -43,17 +158,18 @@ export const DEFAULT_SETTINGS = {
     },
   },
   chat: {
-    welcome_message: "Which country issued your passport?",
+    welcome_message: "Check your entry requirements, choose the travel services that suit your needs, and complete your application with instant AI\u00A0assistance.",
     passport_selected_message: "Passport selected.",
     insurance_required_message: "Travel health insurance is mandatory for the full duration of your stay.",
-    bottom_disclaimer: "AI travel assistant • Human experts available",
+    bottom_disclaimer: "",
     faq_text: "Frequently asked questions about travelling to Türkiye.",
     track_text: "Track your application status here.",
     contact_text: "Contact our travel experts — we reply within 24 hours.",
   },
+  content: CONTENT_SEED,
   apply: {
     title: "Start your application",
-    intro: "Fill in your details and our team will process your travel authorization.",
+    intro: "Fill in your details and our team will process your e-Permit.",
     form_fields: [
       { name: "full_name", label: "Full name", type: "text", required: true },
       { name: "email", label: "Email", type: "email", required: true },
@@ -61,6 +177,9 @@ export const DEFAULT_SETTINGS = {
       { name: "arrival_date", label: "Planned arrival date", type: "date", required: false },
     ],
     success_message: "Application received! Check your email for the next steps.",
+    success_title: "Application received",
+    success_email_note: "A confirmation was sent to {email}. Keep your tracking number for status updates.",
+    tracking_prefix: "TEG",
     force_insurance: true,
   },
   brand: {
@@ -69,27 +188,70 @@ export const DEFAULT_SETTINGS = {
     logo_url: "",
     favicon_url: "",
     footer_text: "Turkey Travel Assistant — independent travel consultancy.",
+    /** Welcome screen background (URL or data:image…). Empty = default Istanbul image. */
+    welcome_bg_url: "/istanbul-welcome-bg.jpg",
+  },
+  trust: {
+    trust_title: "Why travelers choose us",
+    trust_lines: [],
+    faq_title: "FAQ",
+    faq: [
+      {
+        id: "f1",
+        question: "What does Schengen mean?",
+        answer:
+          "Schengen is a group of European countries with shared border rules. A valid Schengen residence permit or entry stamp can help some travelers qualify for a Türkiye e-Permit option.",
+        sort: 1,
+        active: true,
+      },
+      {
+        id: "f2",
+        question: "How long does delivery take?",
+        answer:
+          "Depending on the processing speed you choose, delivery typically occurs between 60 minutes and 7 days. Details are sent to your email.",
+        sort: 2,
+        active: true,
+      },
+      {
+        id: "f3",
+        question: "Do I need travel insurance?",
+        answer:
+          "Travel health insurance covering your full stay in Türkiye is required or strongly advised for most travelers, including many entry-free nationalities.",
+        sort: 3,
+        active: true,
+      },
+    ],
   },
   option_card_defaults: {
     evisa_conditional: [
-      { id: "resident", title: "Get a Turkey e-Permit", description: "If you have a valid residence permit in an eligible country.", condition: "Hold a valid residence permit from a Schengen/EU country, UK, USA, Canada, Australia, Japan, or South Korea to qualify.", eligible_tags: ["Schengen", "UK", "USA", "Canada", "Australia", "Japan", "South Korea"], price: 60, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["e-Permit + travel info delivered by email.", "Delivery between 60 minutes and 7 days."] },
-      { id: "valid-permit", title: "Get a Turkey e-Permit", description: "If you hold a valid entry permit for an eligible country.", condition: "Valid physical entry permit from the Schengen Area, USA, UK or Ireland required.", eligible_tags: ["Schengen", "USA", "UK", "Ireland"], price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["e-Permit + travel info delivered by email.", "Delivery between 60 minutes and 7 days."] },
-      { id: "gcc", title: "Holiday Entry — GCC Residence", description: "Residents of GCC countries may be eligible for a 30-day holiday entry stream to Türkiye.", price: 20, sort: 3, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: [] },
-      { id: "sticker", title: "Sticker Permit Consultancy", description: "Embassy sticker permit consultancy service.", price: 20, sort: 4, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Document preparation guidance", "Embassy appointment coordination", "Form & biometric support", "Application status tracking"] },
+      { id: "resident", title: "Get a Turkey e-Permit", description: "If you have a valid residence permit in any of the following countries:", condition: "", eligible_tags: [...SCHENGEN_RESIDENCE_TAGS], price: 60, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Your Turkey e-Permit and travel information will be delivered directly to your email. Depending on the processing speed chosen, delivery occurs between 60 minutes and 7 days."] },
+      { id: "valid-permit", title: "Get a Turkey e-Permit", description: "If you have a valid entry permit to any of the following countries:", condition: "", eligible_tags: ["EU Schengen Area", "US United States", "GB United Kingdom", "IE Ireland"], price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you hold a valid physical entry permit from the Schengen Area, USA, UK, or Ireland, you are eligible for an easy online e-Permit. Your Turkey e-Permit and travel information will be delivered directly to your email. Depending on the processing speed chosen, delivery occurs between 60 minutes and 7 days."] },
+      { id: "gcc", title: "Get a Turkey Entry Permit", description: "If you have a valid residence permit to any of the following countries:", condition: "", eligible_tags: ["AE UAE", "SA Saudi Arabia", "QA Qatar", "KW Kuwait", "OM Oman", "BH Bahrain"], price: 60, sort: 3, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Citizens holding a valid residence permit from one of the following countries are eligible to apply for a Turkey entry permit for holiday purposes. This streamlines the process, offering a 30-day stay in Turkey. Your application and information details will be sent to your email address within the same day."] },
+      { id: "sticker", title: "Get a Turkey Entry Permit", description: "If you do not qualify for an online e-Permit option:", condition: "", eligible_tags: ["Document preparation", "Embassy appointment", "Form & biometric support", "Application tracking"], price: 20, sort: 4, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you do not qualify for an online e-Permit, our consultancy supports a Turkey entry permit through the embassy / consulate sticker process. We guide you on documents, appointments, forms and biometrics. Application details and next steps are sent to your email."] },
     ] as OptionCardDef[],
     age_special: [
-      { id: "age-direct", title: "Get a Turkey e-Permit", description: "Direct e-Permit for eligible age groups.", price: 60, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["e-Permit + travel info delivered by email.", "Delivery between 60 minutes and 7 days."] },
-      { id: "age-permit", title: "Get a Turkey e-Permit", description: "With a valid entry permit for an eligible country.", condition: "Valid physical entry permit from the Schengen Area, USA, UK or Ireland required.", price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: [] },
-      { id: "gcc", title: "Holiday Entry — GCC Residence", description: "Residents of GCC countries may be eligible for a 30-day holiday entry stream to Türkiye.", price: 20, sort: 3, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: [] },
-      { id: "sticker", title: "Sticker Permit Consultancy", description: "Embassy sticker permit consultancy service.", price: 20, sort: 4, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Document preparation guidance", "Embassy appointment coordination", "Form & biometric support", "Application status tracking"] },
+      { id: "age-direct", title: "Get a Turkey e-Permit", description: "Direct e-Permit for eligible age groups.", price: 60, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["e-Permit + travel info delivered by email.", "Delivery between 60 minutes and 7 days."], require_age_confirm: true, age_confirm_info: "Under 15 and over 45 can apply for a direct e-Permit without additional permit conditions.", age_confirm_question: "Are you under 15 or over 45?" },
+      { id: "age-permit", title: "Get a Turkey e-Permit", description: "With a valid entry permit for an eligible country.", condition: "Valid physical entry permit from the Schengen Area, USA, UK or Ireland required.", eligible_tags: ["EU Schengen Area", "US United States", "GB United Kingdom", "IE Ireland"], price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you hold a valid physical entry permit from the Schengen Area, USA, UK, or Ireland, you are eligible for an easy online e-Permit. Your Turkey e-Permit and travel information will be delivered directly to your email. Depending on the processing speed chosen, delivery occurs between 60 minutes and 7 days."] },
+      { id: "gcc", title: "Get a Turkey Entry Permit", description: "If you have a valid residence permit to any of the following countries:", condition: "", eligible_tags: ["AE UAE", "SA Saudi Arabia", "QA Qatar", "KW Kuwait", "OM Oman", "BH Bahrain"], price: 60, sort: 3, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Citizens holding a valid residence permit from one of the following countries are eligible to apply for a Turkey entry permit for holiday purposes. This streamlines the process, offering a 30-day stay in Turkey. Your application and information details will be sent to your email address within the same day."] },
+      { id: "sticker", title: "Get a Turkey Entry Permit", description: "If you do not qualify for an online e-Permit option:", condition: "", eligible_tags: ["Document preparation", "Embassy appointment", "Form & biometric support", "Application tracking"], price: 20, sort: 4, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you do not qualify for an online e-Permit, our consultancy supports a Turkey entry permit through the embassy / consulate sticker process. We guide you on documents, appointments, forms and biometrics. Application details and next steps are sent to your email."] },
     ] as OptionCardDef[],
     sticker_mission: [
-      { id: "consultancy", title: "Sticker Permit Consultancy Service", description: "Full-service embassy sticker permit support.", price: 20, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Full document preparation & checklist", "Consular appointment booking assistance", "Form completion & biometric support", "24/7 application status tracking"] },
-      { id: "gcc", title: "Holiday Entry — GCC Residence", description: "Residents of GCC countries may be eligible for a 30-day holiday entry stream to Türkiye.", price: 20, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: [] },
+      { id: "consultancy", title: "Get a Turkey Entry Permit", description: "If you do not qualify for an online e-Permit option:", condition: "", eligible_tags: ["Document preparation", "Embassy appointment", "Form & biometric support", "Application tracking"], price: 20, sort: 1, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["If you do not qualify for an online e-Permit, our consultancy supports a Turkey entry permit through the embassy / consulate sticker process. We guide you on documents, appointments, forms and biometrics. Application details and next steps are sent to your email."] },
+      { id: "gcc", title: "Get a Turkey Entry Permit", description: "If you have a valid residence permit to any of the following countries:", condition: "", eligible_tags: ["AE UAE", "SA Saudi Arabia", "QA Qatar", "KW Kuwait", "OM Oman", "BH Bahrain"], price: 60, sort: 2, active: true, cta_label: "APPLY NOW", cta_href: "/next", bullets: ["Citizens holding a valid residence permit from one of the following countries are eligible to apply for a Turkey entry permit for holiday purposes. This streamlines the process, offering a 30-day stay in Turkey. Your application and information details will be sent to your email address within the same day."] },
     ] as OptionCardDef[],
     evisa_direct: [] as OptionCardDef[],
     visa_exempt: [] as OptionCardDef[],
   },
+  esim: {
+    enabled: true,
+    currency: 'USD',
+    intro: 'Türkiye için eSIM veri paketleri. Ödeme sonrası dakikalar içinde QR ile kurulum.',
+    cta_label: 'BUY eSIM',
+    cta_href: '/next',
+    plans: DEFAULT_ESIM_PLANS,
+  },
+  /** Server-only AI grounding bank — not exposed on public /settings. */
+  knowledge: KNOWLEDGE_SEED,
 };
 
 export type SiteSettings = typeof DEFAULT_SETTINGS;

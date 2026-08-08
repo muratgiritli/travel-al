@@ -72,6 +72,22 @@ export default function ApplyTab({
           <Field label="Title" value={apply.title} onChange={(v) => setApply({ ...apply, title: v })} checkForbidden />
           <TextArea label="Intro" value={apply.intro} onChange={(v) => setApply({ ...apply, intro: v })} rows={2} checkForbidden />
           <TextArea label="Success message" value={apply.success_message} onChange={(v) => setApply({ ...apply, success_message: v })} rows={2} checkForbidden />
+          <Field
+            label="Success title"
+            value={apply.success_title || ''}
+            onChange={(v) => setApply({ ...apply, success_title: v })}
+          />
+          <TextArea
+            label="Success email note (use {email} and {tracking})"
+            value={apply.success_email_note || ''}
+            onChange={(v) => setApply({ ...apply, success_email_note: v })}
+            rows={2}
+          />
+          <Field
+            label="Tracking prefix"
+            value={apply.tracking_prefix || 'TEG'}
+            onChange={(v) => setApply({ ...apply, tracking_prefix: v })}
+          />
           <Toggle label="Force insurance" checked={apply.force_insurance} onChange={(v) => setApply({ ...apply, force_insurance: v })} />
         </div>
       </Card>

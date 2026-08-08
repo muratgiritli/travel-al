@@ -101,7 +101,7 @@ export default function AskAIDrawer({ countryId, countryName }: { countryId: str
                 >
                   🕌
                 </span>
-                <span className="font-semibold text-[14px] text-gray-900">Turkey Travel Assistant</span>
+                <span className="font-semibold text-[14px] text-gray-900">Türkiye Entry Guide</span>
               </div>
               <button
                 onClick={() => setOpen(false)}

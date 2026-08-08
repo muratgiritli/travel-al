@@ -7,18 +7,28 @@ import Dashboard from '@/components/admin/Dashboard';
 import CountriesTab from '@/components/admin/CountriesTab';
 import PricingTab from '@/components/admin/PricingTab';
 import ChatTab from '@/components/admin/ChatTab';
+import ContentTab from '@/components/admin/ContentTab';
 import ApplyTab from '@/components/admin/ApplyTab';
 import BrandTab from '@/components/admin/BrandTab';
 import SecurityTab from '@/components/admin/SecurityTab';
+import EsimTab from '@/components/admin/EsimTab';
+import TrustTab from '@/components/admin/TrustTab';
+import KnowledgeTab from '@/components/admin/KnowledgeTab';
+import OrdersTab from '@/components/admin/OrdersTab';
 
-type Tab = 'dashboard' | 'countries' | 'pricing' | 'chat' | 'apply' | 'brand' | 'security';
+type Tab = 'dashboard' | 'orders' | 'countries' | 'pricing' | 'esim' | 'trust' | 'knowledge' | 'content' | 'chat' | 'apply' | 'brand' | 'security';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
+  { id: 'orders', label: 'Orders', emoji: '🧾' },
   { id: 'countries', label: 'Countries', emoji: '🌍' },
   { id: 'pricing', label: 'Pricing', emoji: '💲' },
-  { id: 'chat', label: 'Chat & Copy', emoji: '💬' },
-  { id: 'apply', label: 'Apply', emoji: '📝' },
+  { id: 'esim', label: 'eSIM', emoji: '📶' },
+  { id: 'trust', label: 'Trust & FAQ', emoji: '🛡️' },
+  { id: 'knowledge', label: 'AI knowledge', emoji: '🧠' },
+  { id: 'content', label: 'Content', emoji: '📝' },
+  { id: 'chat', label: 'Chat messages', emoji: '💬' },
+  { id: 'apply', label: 'Apply', emoji: '📋' },
   { id: 'brand', label: 'Brand', emoji: '🎨' },
   { id: 'security', label: 'Security', emoji: '🔒' },
 ];
@@ -131,8 +141,13 @@ export default function Admin() {
         {tab === 'dashboard' && (
           <Dashboard onNavigate={(t) => setTab(t as Tab)} onUnauthorized={onUnauthorized} />
         )}
+        {tab === 'orders' && <OrdersTab {...tabProps} />}
         {tab === 'countries' && <CountriesTab {...tabProps} />}
         {tab === 'pricing' && <PricingTab {...tabProps} />}
+        {tab === 'esim' && <EsimTab {...tabProps} />}
+        {tab === 'trust' && <TrustTab {...tabProps} />}
+        {tab === 'knowledge' && <KnowledgeTab {...tabProps} />}
+        {tab === 'content' && <ContentTab {...tabProps} />}
         {tab === 'chat' && <ChatTab {...tabProps} />}
         {tab === 'apply' && <ApplyTab {...tabProps} />}
         {tab === 'brand' && <BrandTab {...tabProps} />}

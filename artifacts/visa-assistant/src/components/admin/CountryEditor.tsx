@@ -9,8 +9,11 @@ import {
   RawCountry,
   UnauthorizedError,
   getCountry,
+  getWireStatus,
+  getWireSummary,
   saveCountry,
   resetCountry,
+  setWireSummary,
 } from './api';
 import {
   Button,
@@ -23,6 +26,7 @@ import {
   Toggle,
 } from './ui';
 import OptionCardsEditor from './OptionCardsEditor';
+import { WIRE_CAT } from '@/lib/wireCodes';
 
 type Form = {
   name: string;
@@ -32,7 +36,7 @@ type Form = {
   slug: string;
   category: Category;
   is_active: boolean;
-  visa_summary: string;
+  status_summary: string;
   stay_rule: string;
   precondition: string;
   airline_conditions: string;
@@ -66,9 +70,9 @@ function toForm(c: RawCountry): Form {
     iso2: c.iso2 ?? '',
     flag_emoji: c.flag_emoji ?? '',
     slug: c.slug ?? '',
-    category: c.category ?? 'evisa_direct',
+    category: c.category ?? WIRE_CAT.ePermitDirect,
     is_active: c.is_active !== false,
-    visa_summary: c.visa_summary ?? '',
+    status_summary: getWireSummary(c as unknown as Record<string, unknown>),
     stay_rule: c.stay_rule ?? '',
     precondition: c.precondition ?? '',
     airline_conditions: c.airline_conditions ?? '',
@@ -155,7 +159,7 @@ export default function CountryEditor({
   const save = async () => {
     setSaving(true);
     try {
-      const payload = {
+      const payload = setWireSummary({
         name: form.name,
         name_tr: form.name_tr,
         iso2: form.iso2,
@@ -163,7 +167,6 @@ export default function CountryEditor({
         slug: form.slug,
         category: form.category,
         is_active: form.is_active,
-        visa_summary: form.visa_summary,
         stay_rule: form.stay_rule,
         precondition: form.precondition,
         airline_conditions: form.airline_conditions,
@@ -188,8 +191,8 @@ export default function CountryEditor({
         passport_validity_text: form.passport_validity_text,
         max_stay_text: form.max_stay_text,
         insurance_label: form.insurance_label,
-      };
-      const res = await saveCountry(id, payload);
+      }, form.status_summary);
+      const res = await saveCountry(id, payload as unknown as Partial<RawCountry>);
       setCard(res.card);
       setPricing(res.pricing);
       onSaved();
@@ -265,7 +268,7 @@ export default function CountryEditor({
             </p>
             <div className="grid md:grid-cols-2 gap-4">
               <Field label="Badge country label" value={form.badge_country_label} onChange={(v) => set('badge_country_label', v)} placeholder={form.name.toUpperCase()} checkForbidden />
-              <Field label="Title" value={form.top_title} onChange={(v) => set('top_title', v)} placeholder="Get Your Travel E-Visa" />
+              <Field label="Title" value={form.top_title} onChange={(v) => set('top_title', v)} placeholder="Get Your Travel …" />
               <Field label="Subtitle" value={form.top_subtitle} onChange={(v) => set('top_subtitle', v)} placeholder={`for ${form.name} Citizens`} checkForbidden />
               <Field label="Support line" value={form.support_line} onChange={(v) => set('support_line', v)} placeholder="(category default)" checkForbidden />
               <Field label="Requirements title (no year)" value={form.requirements_title} onChange={(v) => set('requirements_title', v)} placeholder="Travel Requirements for Turkey:" checkForbidden />
@@ -278,7 +281,7 @@ export default function CountryEditor({
           <Card>
             <h3 className="font-semibold text-[15px] text-gray-900 mb-4">Content</h3>
             <div className="flex flex-col gap-4">
-              <Field label="Status summary" value={form.visa_summary} onChange={(v) => set('visa_summary', v)} checkForbidden />
+              <Field label="Status summary" value={form.status_summary} onChange={(v) => set('status_summary', v)} checkForbidden />
               <TextArea label="Stay rule" value={form.stay_rule} onChange={(v) => set('stay_rule', v)} rows={2} checkForbidden />
               <TextArea label="Precondition" value={form.precondition} onChange={(v) => set('precondition', v)} rows={2} checkForbidden />
               <TextArea label="Airline conditions" value={form.airline_conditions} onChange={(v) => set('airline_conditions', v)} rows={2} checkForbidden />
@@ -371,7 +374,7 @@ export default function CountryEditor({
             <Label>Top block preview</Label>
             <div className="rounded-2xl p-4 mt-2 mb-4" style={{ background: '#fff', border: '1px solid #e5e7eb' }}>
               <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide" style={{ background: 'linear-gradient(135deg, #f3e3bd, #e2c684)', color: '#7c5c1e', border: '1px solid #d9bd7f' }}>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-wide text-white" style={{ background: '#E30A17', border: '1px solid #E30A17' }}>
                   🇹🇷 TURKEY
                 </span>
                 <span className="text-gray-400 text-[13px] font-bold">+</span>
@@ -380,7 +383,7 @@ export default function CountryEditor({
                 </span>
               </div>
               <div className="text-center mb-4">
-                <div className="font-black text-[19px] text-gray-900 leading-tight">{form.top_title || 'Get Your Travel E-Visa'}</div>
+                <div className="font-black text-[19px] text-gray-900 leading-tight">{form.top_title || 'Get Your Travel …'}</div>
                 <div className="font-semibold text-[14px] text-gray-700 mt-0.5">{form.top_subtitle || `for ${form.name} Citizens`}</div>
                 {form.support_line && <div className="text-[12px] text-gray-500 mt-1">{form.support_line}</div>}
               </div>
@@ -411,9 +414,9 @@ export default function CountryEditor({
                 <span>🇹🇷 Türkiye</span>
               </div>
               <div className="flex flex-wrap gap-2 mb-3">
-                {(card?.visa_status || form.visa_summary) && (
+                {(getWireStatus(card as unknown as Record<string, unknown>) || form.status_summary) && (
                   <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>
-                    {card?.visa_status || form.visa_summary}
+                    {getWireStatus(card as unknown as Record<string, unknown>) || form.status_summary}
                   </span>
                 )}
                 {form.insurance_required && (

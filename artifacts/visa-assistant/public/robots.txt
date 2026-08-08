@@ -1,2 +1,12 @@
+# Do not allow search-engine crawlers to index this service.
 User-agent: *
-Allow: /
+Disallow: /
+
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Googlebot-Image
+Disallow: /
+
+User-agent: Bingbot
+Disallow: /

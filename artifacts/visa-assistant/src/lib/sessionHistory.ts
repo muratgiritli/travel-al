@@ -1,12 +1,12 @@
 /**
  * Session history helpers — all persistence is backed by localStorage.
  *
- * A "session" is a past visa-chat conversation the user can revisit.
+ * A "session" is a past chat conversation the user can revisit.
  * The history is stored as a JSON array under SESSION_HISTORY_KEY, ordered
  * newest-first.
  */
 
-export const SESSION_HISTORY_KEY = 'turkey_visa_session_history';
+export const SESSION_HISTORY_KEY = 'teg_entry_session_history';
 
 export interface SessionEntry {
   /** Unique session identifier */

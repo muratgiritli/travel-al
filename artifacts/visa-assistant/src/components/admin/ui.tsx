@@ -1,6 +1,7 @@
 // ── Shared admin UI primitives ────────────────────────────────────────────────
 import { ReactNode } from 'react';
 import { hasForbiddenWord, FORBIDDEN_WARNING } from './api';
+import { WIRE_CAT } from '@/lib/wireCodes';
 
 export const NAVY = '#0a1f44';
 export const GOLD = '#c5a059';
@@ -207,11 +208,11 @@ export function Toast({ message, kind = 'ok' }: { message: string; kind?: 'ok' |
 }
 
 export const CATEGORY_OPTIONS = [
-  { value: 'visa_exempt', label: 'E-visa free entry' },
-  { value: 'evisa_direct', label: 'Direct e-permit' },
-  { value: 'evisa_conditional', label: 'Conditional e-permit' },
-  { value: 'age_special', label: 'Age-specific rules' },
-  { value: 'sticker_mission', label: 'Mission / sticker' },
+  { value: WIRE_CAT.entryFree, label: 'Entry free' },
+  { value: WIRE_CAT.ePermitDirect, label: 'Direct online' },
+  { value: WIRE_CAT.ePermitConditional, label: 'Conditional online' },
+  { value: WIRE_CAT.ageSpecial, label: 'Age-specific rules' },
+  { value: WIRE_CAT.stickerMission, label: 'Mission / sticker' },
 ];
 
 export function categoryLabel(cat: string): string {

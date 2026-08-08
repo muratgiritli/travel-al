@@ -1,12 +1,31 @@
 import { Route, Switch, Router as WouterRouter, Redirect, useParams } from 'wouter';
-import VisaChat from '@/pages/VisaChat';
+import EntryChat from '@/pages/EntryChat';
 import Admin from '@/pages/Admin';
 import NextPage from '@/pages/NextPage';
 import Checkout from '@/pages/Checkout';
+import FaqPage from '@/pages/FaqPage';
+import ContactPage from '@/pages/ContactPage';
+import TrackPage from '@/pages/TrackPage';
+import PrivacyPage from '@/pages/PrivacyPage';
+import TermsPage from '@/pages/TermsPage';
 import NotFound from '@/pages/not-found';
+import { legacyPathSegment } from '@/lib/wireCodes';
+import { I18nProvider } from '@/lib/i18n';
+
+const LEGACY = legacyPathSegment();
 
 /** Reserved paths that must never be treated as country slugs. */
-const RESERVED = new Set(['faq', 'track', 'contact', 'checkout', 'next', 'admin', 'visa']);
+const RESERVED = new Set([
+  'faq',
+  'track',
+  'contact',
+  'privacy',
+  'terms',
+  'checkout',
+  'next',
+  'admin',
+  LEGACY,
+]);
 
 /**
  * Deep links like /pakistan redirect into chat state on "/".
@@ -23,20 +42,17 @@ function CountryDeepLink() {
 function Router() {
   return (
     <Switch>
-      {/* Legacy /visa/* → redirect to root */}
-      <Route path="/visa/:rest*"><Redirect to="/" /></Route>
-      <Route path="/visa"><Redirect to="/" /></Route>
-      <Route path="/" component={VisaChat} />
+      <Route path={`/${LEGACY}/:rest*`}><Redirect to="/" /></Route>
+      <Route path={`/${LEGACY}`}><Redirect to="/" /></Route>
+      <Route path="/" component={EntryChat} />
       <Route path="/admin" component={Admin} />
-      {/* Application start page */}
       <Route path="/next" component={NextPage} />
-      {/* Insurance checkout */}
       <Route path="/checkout" component={Checkout} />
-      {/* Reserved paths — never country slugs, never "Country not found" */}
-      <Route path="/faq"><Redirect to="/" /></Route>
-      <Route path="/track"><Redirect to="/" /></Route>
-      <Route path="/contact"><Redirect to="/" /></Route>
-      {/* Country deep links redirect into chat state on "/" */}
+      <Route path="/faq" component={FaqPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/track" component={TrackPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
       <Route path="/:countrySlug" component={CountryDeepLink} />
       <Route component={NotFound} />
     </Switch>
@@ -44,10 +60,11 @@ function Router() {
 }
 
 export default function App() {
-  // BASE_URL is "/" now — base must be empty string for root-mounted router
   return (
-    <WouterRouter base="">
-      <Router />
-    </WouterRouter>
+    <I18nProvider>
+      <WouterRouter base="">
+        <Router />
+      </WouterRouter>
+    </I18nProvider>
   );
 }

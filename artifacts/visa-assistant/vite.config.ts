@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+import { localMockApi } from './local-mock-api';
 
 const rawPort = process.env.PORT;
 
@@ -33,6 +34,29 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    {
+      name: 'noindex-headers',
+      configureServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader(
+            'X-Robots-Tag',
+            'noindex, nofollow, noarchive, nosnippet, noimageindex',
+          );
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader(
+            'X-Robots-Tag',
+            'noindex, nofollow, noarchive, nosnippet, noimageindex',
+          );
+          next();
+        });
+      },
+    },
+    // Local Cursor preview without Postgres / API server
+    ...(process.env.LOCAL_MOCK === '1' ? [localMockApi()] : []),
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined
       ? [
@@ -71,6 +95,13 @@ export default defineConfig({
     allowedHosts: true,
     fs: {
       strict: true,
+    },
+    // Local Cursor/dev: frontend on Vite, API on 8080
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
     },
   },
   preview: {

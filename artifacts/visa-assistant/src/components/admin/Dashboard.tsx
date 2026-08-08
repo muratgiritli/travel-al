@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react';
 import { getSummary, Summary, UnauthorizedError } from './api';
 import { Card, categoryLabel, GOLD, NAVY } from './ui';
+import { WIRE_CAT } from '@/lib/wireCodes';
 
 const CATS = [
-  'visa_exempt',
-  'evisa_direct',
-  'evisa_conditional',
-  'age_special',
-  'sticker_mission',
+  WIRE_CAT.entryFree,
+  WIRE_CAT.ePermitDirect,
+  WIRE_CAT.ePermitConditional,
+  WIRE_CAT.ageSpecial,
+  WIRE_CAT.stickerMission,
 ];
 
 const QUICK_LINKS: { tab: string; label: string; emoji: string }[] = [
+  { tab: 'orders', label: 'Orders', emoji: '🧾' },
   { tab: 'countries', label: 'Countries', emoji: '🌍' },
   { tab: 'pricing', label: 'Pricing', emoji: '💲' },
-  { tab: 'chat', label: 'Chat & Copy', emoji: '💬' },
+  { tab: 'esim', label: 'eSIM Plans', emoji: '📶' },
+  { tab: 'trust', label: 'Trust & FAQ', emoji: '🛡️' },
+  { tab: 'knowledge', label: 'AI knowledge', emoji: '🧠' },
+  { tab: 'content', label: 'Content', emoji: '📝' },
+  { tab: 'chat', label: 'Chat messages', emoji: '💬' },
   { tab: 'apply', label: 'Apply', emoji: '📝' },
   { tab: 'brand', label: 'Brand', emoji: '🎨' },
   { tab: 'security', label: 'Security', emoji: '🔒' },

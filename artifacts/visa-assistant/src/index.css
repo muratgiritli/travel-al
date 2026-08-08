@@ -373,3 +373,41 @@
     inset: -1px;
   }
 }
+
+/* Welcome screen: pulse arrow pointing to country composer */
+@keyframes teg-pulse-down {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  15% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  45% {
+    transform: translateY(8px);
+    opacity: 1;
+  }
+  60% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+}
+
+.teg-pulse-arrow {
+  animation: teg-pulse-down 1.4s ease-in-out infinite;
+  color: #C73E54;
+  font-size: 22px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.teg-pulse-arrow.on-photo {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
