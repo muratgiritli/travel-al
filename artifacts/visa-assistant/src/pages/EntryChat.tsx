@@ -631,20 +631,20 @@ export default function EntryChat() {
 
   return (
     <div
-      className="flex items-center justify-center p-4"
-      style={{ background: '#f4f6f9', minHeight: '100dvh' }}
+      className="flex items-stretch sm:items-center justify-center min-h-dvh p-0 sm:p-4 md:p-6"
+      style={{ background: '#f4f6f9' }}
     >
       <div
-        className="w-full flex flex-col overflow-hidden relative"
+        className={[
+          'w-full flex flex-col overflow-hidden relative bg-white',
+          // Mobile: full-bleed app · Tablet: wide card · Desktop: still wider
+          'h-dvh max-w-none rounded-none border-0 shadow-none',
+          'sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-xl sm:rounded-3xl sm:border sm:border-gray-200 sm:shadow-[0_8px_28px_rgba(10,31,68,.08)]',
+          'md:max-w-3xl md:h-[min(920px,calc(100dvh-3rem))]',
+          'lg:max-w-4xl lg:h-[calc(100dvh-3rem)]',
+          'xl:max-w-5xl',
+        ].join(' ')}
         dir={dir}
-        style={{
-          maxWidth: 430,
-          height: 'min(860px, calc(100dvh - 2rem))',
-          background: '#fff',
-          border: '1px solid #e5e7eb',
-          borderRadius: 24,
-          boxShadow: '0 8px 28px rgba(10,31,68,.08)',
-        }}
       >
         {/* ── History panel (overlays the whole card) ── */}
         {showHistory && (
@@ -775,7 +775,7 @@ export default function EntryChat() {
                 <div className="relative z-[1] flex-1 flex flex-col items-center text-center px-5 pt-8 sm:pt-10">
                   {site.welcome_title && (
                     <h1
-                      className="font-semibold text-[22px] sm:text-[26px] leading-tight tracking-tight text-white max-w-[320px]"
+                      className="font-semibold text-[22px] sm:text-[26px] md:text-[28px] leading-tight tracking-tight text-white max-w-[320px] sm:max-w-md md:max-w-lg lg:max-w-xl"
                       style={{ textShadow: '0 2px 18px rgba(0,0,0,.45)' }}
                     >
                       {site.welcome_title}
@@ -787,7 +787,7 @@ export default function EntryChat() {
                 <div className="relative z-[1] flex flex-col items-center text-center px-5 pb-7 pt-2">
                   {site.welcome_message && (
                     <p
-                      className="text-[13px] sm:text-[14px] text-white/95 leading-relaxed max-w-[340px]"
+                      className="text-[13px] sm:text-[14px] md:text-[15px] text-white/95 leading-relaxed max-w-[340px] sm:max-w-md md:max-w-lg lg:max-w-xl"
                       style={{ textShadow: '0 1px 12px rgba(0,0,0,.5)' }}
                     >
                       {site.welcome_message}
@@ -795,7 +795,7 @@ export default function EntryChat() {
                   )}
                   {site.select_hint && (
                     <p
-                      className="text-[12px] sm:text-[13px] font-medium text-white/90 mt-3 max-w-[280px]"
+                      className="text-[12px] sm:text-[13px] font-medium text-white/90 mt-3 max-w-[280px] sm:max-w-sm md:max-w-md"
                       style={{ textShadow: '0 1px 10px rgba(0,0,0,.5)' }}
                     >
                       {site.select_hint}

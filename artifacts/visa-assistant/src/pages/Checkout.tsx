@@ -26,7 +26,7 @@ export default function Checkout() {
     <div className="min-h-screen" style={{ background: '#f4f6f9' }}>
       {/* ── Header (chat chrome only) ── */}
       <header className="px-4 py-3" style={{ background: '#0a1f44' }}>
-        <div className="max-w-xl mx-auto flex items-center justify-between">
+        <div className="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div
               className="shrink-0 overflow-hidden relative"
@@ -56,7 +56,7 @@ export default function Checkout() {
       </header>
 
       <main
-        className="max-w-xl mx-auto px-4 py-6 flex flex-col gap-4"
+        className="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 py-6 flex flex-col gap-4"
         style={{ paddingBottom: bottomPad }}
       >
         <div className="text-center">

@@ -90,7 +90,7 @@ export default function ServiceHub({
   const isEntryFree = category === WIRE_CAT.entryFree;
 
   return (
-    <div className="mt-2 space-y-2.5">
+    <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2.5">
       {services.map((s) => {
         // VISA FREE opens insurance — keep both frames visually related when open
         const selected =
@@ -101,7 +101,7 @@ export default function ServiceHub({
             key={s.id}
             type="button"
             onClick={() => onSelect(s.id)}
-            className="w-full text-left rounded-2xl px-4 py-3.5 transition-all relative overflow-hidden"
+            className="w-full h-full text-left rounded-2xl px-4 py-3.5 md:py-4 transition-all relative overflow-hidden"
             style={{
               background: s.wash,
               border: selected ? `2px solid ${s.accent}` : `1px solid ${s.border}`,

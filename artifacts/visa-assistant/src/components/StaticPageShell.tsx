@@ -16,7 +16,7 @@ export default function StaticPageShell({
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f4f6f9' }}>
       <header className="px-4 py-3" style={{ background: '#0a1f44' }}>
-        <div className="max-w-xl mx-auto flex items-center justify-between">
+        <div className="w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-white font-bold text-[15px]">{brand.site_name}</span>
           </Link>
@@ -26,7 +26,7 @@ export default function StaticPageShell({
         </div>
       </header>
       <main
-        className="flex-1 max-w-xl mx-auto w-full px-4 py-6"
+        className="flex-1 w-full max-w-xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 py-6"
         style={{ paddingBottom: bottomPad }}
       >
         <h1 className="font-bold text-[22px] mb-4" style={{ color: '#0a1f44' }}>

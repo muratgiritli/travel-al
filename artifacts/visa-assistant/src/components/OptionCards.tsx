@@ -246,7 +246,7 @@ export default function OptionCards({
   onApply?: (card: OptionCard, index: number) => void;
 }) {
   return (
-    <>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-3">
       {cards.map((card, i) => (
         <OptionCardView
           key={card.id || i}
@@ -257,6 +257,6 @@ export default function OptionCards({
           onApply={onApply}
         />
       ))}
-    </>
+    </div>
   );
 }
