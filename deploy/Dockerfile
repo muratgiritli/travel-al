@@ -12,7 +12,7 @@ COPY artifacts ./artifacts
 COPY lib ./lib
 COPY scripts ./scripts
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.dangerouslyAllowAllBuilds=true
 
 ENV PORT=5173
 ENV BASE_PATH=/
