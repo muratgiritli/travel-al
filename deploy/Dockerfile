@@ -27,4 +27,4 @@ ENV PORT=8080
 ENV STATIC_DIR=/app/artifacts/visa-assistant/dist/public
 
 EXPOSE 8080
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh","/entrypoint.sh"]
