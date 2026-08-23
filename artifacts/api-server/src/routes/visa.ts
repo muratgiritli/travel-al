@@ -30,7 +30,11 @@ const openai = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "",
     })
-  : new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() });
+  : new OpenAI({
+      apiKey:
+        (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() ||
+        "missing",
+    });
 
 const router: IRouter = Router();
 
