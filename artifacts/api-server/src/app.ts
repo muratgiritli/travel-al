@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -38,5 +40,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+const staticDir = process.env["STATIC_DIR"];
+if (staticDir && existsSync(staticDir)) {
+  app.use(express.static(staticDir, { index: "index.html" }));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      next();
+      return;
+    }
+    if (req.path.startsWith("/api")) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(staticDir, "index.html"), (err) => {
+      if (err) next(err);
+    });
+  });
+}
 
 export default app;
