@@ -1,0 +1,40 @@
+# Shared Hetzner box: host Caddy owns :80/:443.
+# This stack only binds a localhost/high port.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: travel
+      POSTGRES_USER: travel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travel -d travel"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:5017:8080"
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      STATIC_DIR: /app/artifacts/visa-assistant/dist/public
+      DATABASE_URL: postgres://travel:${POSTGRES_PASSWORD}@db:5432/travel
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      MAX_HISTORY_MESSAGES: ${MAX_HISTORY_MESSAGES:-20}
+
+volumes:
+  pgdata:
