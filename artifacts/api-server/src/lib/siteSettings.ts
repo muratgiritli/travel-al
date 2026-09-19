@@ -163,7 +163,7 @@ export const DEFAULT_SETTINGS = {
     insurance_required_message: "Travel health insurance is mandatory for the full duration of your stay.",
     bottom_disclaimer: "",
     faq_text: "Frequently asked questions about travelling to Türkiye.",
-    track_text: "Track your application status here.",
+    track_text: "Enter your reference number and the email you applied with to see the current status.",
     contact_text: "Contact our travel experts — we reply within 24 hours.",
   },
   content: CONTENT_SEED,
@@ -176,9 +176,12 @@ export const DEFAULT_SETTINGS = {
       { name: "passport_number", label: "Passport number", type: "text", required: true },
       { name: "arrival_date", label: "Planned arrival date", type: "date", required: false },
     ],
-    success_message: "Application received! Check your email for the next steps.",
+    success_message: "Application received. Our team reviews applications in order of arrival.",
     success_title: "Application received",
-    success_email_note: "A confirmation was sent to {email}. Keep your tracking number for status updates.",
+    // Says nothing about a message already being sent: email delivery depends
+    // on RESEND_API_KEY being configured.
+    success_email_note:
+      "Keep this reference — you need it together with {email} to check your status on the Track page.",
     tracking_prefix: "TEG",
     force_insurance: true,
   },
