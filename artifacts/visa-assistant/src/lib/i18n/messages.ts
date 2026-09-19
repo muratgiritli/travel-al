@@ -28,6 +28,26 @@ const ROWS: Record<string, Row> = {
   'common.back': {
     en: 'Back', tr: 'Geri', ar: 'رجوع', es: 'Atrás', de: 'Zurück', fr: 'Retour', ru: 'Назад',
   },
+  'common.share': {
+    en: 'Share', tr: 'Paylaş', ar: 'مشاركة', es: 'Compartir', de: 'Teilen', fr: 'Partager', ru: 'Поделиться',
+  },
+  'common.linkCopied': {
+    en: 'Link copied', tr: 'Bağlantı kopyalandı', ar: 'تم نسخ الرابط', es: 'Enlace copiado',
+    de: 'Link kopiert', fr: 'Lien copié', ru: 'Ссылка скопирована',
+  },
+  'common.retry': {
+    en: 'Retry', tr: 'Tekrar dene', ar: 'أعد المحاولة', es: 'Reintentar', de: 'Erneut versuchen',
+    fr: 'Réessayer', ru: 'Повторить',
+  },
+  'common.offline': {
+    en: 'No connection. Check your network and try again.',
+    tr: 'Bağlantı yok. Ağınızı kontrol edip tekrar deneyin.',
+    ar: 'لا يوجد اتصال. تحقق من الشبكة وحاول مرة أخرى.',
+    es: 'Sin conexión. Revisa tu red e inténtalo de nuevo.',
+    de: 'Keine Verbindung. Prüfe dein Netzwerk und versuche es erneut.',
+    fr: 'Pas de connexion. Vérifiez votre réseau et réessayez.',
+    ru: 'Нет соединения. Проверьте сеть и повторите попытку.',
+  },
   'common.yes': {
     en: 'Yes', tr: 'Evet', ar: 'نعم', es: 'Sí', de: 'Ja', fr: 'Oui', ru: 'Да',
   },

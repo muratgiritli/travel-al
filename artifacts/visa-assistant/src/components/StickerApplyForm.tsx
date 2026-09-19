@@ -63,7 +63,7 @@ function Field({
         autoComplete={autoComplete}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+        className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
         style={{ border: '1px solid #E5E7EB', background: '#F9FAFB' }}
       />
     </label>
@@ -267,7 +267,7 @@ export default function StickerApplyForm({
             <select
               value={residenceCountry}
               onChange={(e) => setResidenceCountry(e.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+              className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
               style={{ border: '1px solid #E5E7EB', background: '#fff' }}
             >
               <option value="">{t('common.selectCountry')}</option>

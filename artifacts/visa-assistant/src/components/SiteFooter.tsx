@@ -13,11 +13,14 @@ export default function SiteFooter() {
 
   return (
     <div className="px-1 pt-2 pb-1">
-      <nav className="flex flex-nowrap items-center justify-center gap-1.5 overflow-x-auto text-[10px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+      <nav className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
         {LINKS.map((l, i) => (
-          <span key={l.href} className="inline-flex items-center gap-1.5 shrink-0">
+          <span key={l.href} className="inline-flex items-center gap-1 shrink-0">
             {i > 0 && <span className="text-gray-300 normal-case font-normal" aria-hidden>|</span>}
-            <Link href={l.href} className="hover:text-gray-800">
+            <Link
+              href={l.href}
+              className="inline-flex min-h-[40px] items-center px-1.5 hover:text-gray-800"
+            >
               {l.label}
             </Link>
           </span>

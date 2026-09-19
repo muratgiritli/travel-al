@@ -14,9 +14,10 @@ COPY scripts ./scripts
 
 RUN pnpm install --frozen-lockfile --config.dangerouslyAllowAllBuilds=true
 
+# NODE_ENV stays unset until now: every build tool here lives in devDependencies.
 ENV PORT=5173
 ENV BASE_PATH=/
-RUN pnpm --filter @workspace/visa-assistant run build \
+RUN NODE_ENV=production pnpm --filter @workspace/visa-assistant run build \
   && pnpm --filter @workspace/api-server run build
 
 COPY deploy/entrypoint.sh /entrypoint.sh
