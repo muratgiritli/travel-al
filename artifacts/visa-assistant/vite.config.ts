@@ -33,7 +33,8 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
+    // Dev-only: the overlay has no purpose in a production bundle.
+    ...(process.env.NODE_ENV !== 'production' ? [runtimeErrorOverlay()] : []),
     {
       name: 'noindex-headers',
       configureServer(server) {
@@ -87,6 +88,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split rarely-changing vendor code so repeat visits on mobile
+        // re-download only the app chunk.
+        manualChunks: {
+          react: ['react', 'react-dom', 'wouter'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
   },
   server: {
     port,

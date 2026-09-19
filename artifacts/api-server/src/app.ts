@@ -43,7 +43,26 @@ app.use("/api", router);
 
 const staticDir = process.env["STATIC_DIR"];
 if (staticDir && existsSync(staticDir)) {
-  app.use(express.static(staticDir, { index: "index.html" }));
+  app.use(
+    express.static(staticDir, {
+      index: "index.html",
+      setHeaders(res, filePath) {
+        // Vite fingerprints everything under /assets, so it can be pinned.
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return;
+        }
+        // A stale worker would pin an old build forever.
+        if (filePath.endsWith("sw.js")) {
+          res.setHeader("Cache-Control", "no-cache");
+          return;
+        }
+        if (/\.(?:webp|jpg|jpeg|png|svg|woff2)$/.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=604800");
+        }
+      },
+    }),
+  );
   app.use((req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       next();
