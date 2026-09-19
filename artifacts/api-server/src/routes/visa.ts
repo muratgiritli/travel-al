@@ -9,19 +9,22 @@ import sanitizeHtml from "sanitize-html";
 import {
   getSettings, putSetting, SETTINGS_KEYS, DEFAULT_SETTINGS,
   type OptionCardDef, type SiteSettings,
-  getAdminAuth, setAdminCredentials, verifyAdminLogin, verifyAdminPassword,
+  getAdminAuth, setAdminCredentials, verifyAdminLogin,
   createSessionToken, verifySessionToken, parseCookies,
 } from "../lib/siteSettings";
 import {
   createOrder,
   listOrders,
   getOrder,
+  findOrderForTracking,
   updateOrderStatus,
   updateOrderNote,
   ORDER_STATUSES,
   type OrderStatus,
   type OrderType,
 } from "../lib/ordersStore";
+import { rateLimit } from "../lib/rateLimit";
+import { isMailConfigured, orderReceivedEmail, sendMail } from "../lib/mailer";
 
 // Prefer the Replit AI Integrations proxy (no user API key / credits needed);
 // fall back to a direct OpenAI key if the proxy env vars are missing.
@@ -459,17 +462,10 @@ function depermitDeep<T>(v: T, key?: string): T {
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  // 1) Session cookie set by /travel/admin/login
+  // Session cookie set by /travel/admin/login. The old x-admin-password header
+  // was removed: it put the standing password on every admin request.
   const cookies = parseCookies(req.headers.cookie);
   if (verifySessionToken(cookies["tta_admin"])) { next(); return; }
-  // 2) Legacy password header (verified against stored credentials)
-  const legacy = (req.headers["x-admin-password"] as string) || "";
-  if (legacy) {
-    verifyAdminPassword(legacy)
-      .then((ok) => (ok ? next() : res.status(401).json({ error: "Unauthorized" })))
-      .catch(() => res.status(401).json({ error: "Unauthorized" }));
-    return;
-  }
   res.status(401).json({ error: "Unauthorized" });
 }
 
@@ -649,7 +645,15 @@ function pickKnowledgeItems(
   return picked;
 }
 
-router.post("/travel/chat", async (req, res) => {
+router.post(
+  "/travel/chat",
+  rateLimit({
+    name: "chat",
+    windowMs: 60 * 1000,
+    max: 20,
+    message: "You are sending messages too quickly. Please wait a moment.",
+  }),
+  async (req, res) => {
   try {
     const { countryId, message, history, language } = req.body || {};
     const replyLang = String(language || "en").slice(0, 8);
@@ -865,13 +869,58 @@ router.post("/travel/chat", async (req, res) => {
     console.error("[visa] POST /visa/chat error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
-});
+  },
+);
 
 // ── Public order intake (applications + payment form shell) ───────────────────
 
+async function getTrackingPrefix(): Promise<string> {
+  try {
+    const settings = await getSettings();
+    const apply = settings.apply as { tracking_prefix?: string } | undefined;
+    return apply?.tracking_prefix || "TEG";
+  } catch {
+    return "TEG";
+  }
+}
+
+/** Best-effort receipt; a mail failure must never fail the application. */
+async function sendOrderReceivedEmail(order: {
+  email: string;
+  tracking_code: string;
+  summary?: string;
+  amount: number;
+  currency: string;
+}): Promise<boolean> {
+  if (!isMailConfigured()) return false;
+  try {
+    const settings = await getSettings();
+    const brand = settings.brand as { site_name?: string } | undefined;
+    const mail = orderReceivedEmail({
+      trackingCode: order.tracking_code,
+      summary: order.summary,
+      amount: order.amount,
+      currency: order.currency,
+      siteName: brand?.site_name || "Türkiye Travel Office",
+      siteUrl: process.env["PUBLIC_SITE_URL"] || "https://turkiyetraveloffice.com",
+    });
+    return await sendMail({ to: order.email, ...mail });
+  } catch (err) {
+    console.error("[visa] order email failed:", err);
+    return false;
+  }
+}
+
 const ORDER_TYPES: OrderType[] = ["entry", "sticker", "insurance", "esim"];
 
-router.post("/travel/orders", async (req, res) => {
+const createOrderLimiter = rateLimit({
+  name: "orders",
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  message: "Too many applications from this address. Please try again later.",
+});
+
+router.post("/travel/orders", createOrderLimiter, async (req, res) => {
   try {
     const body = req.body || {};
     const type = String(body.type || "") as OrderType;
@@ -909,14 +958,73 @@ router.post("/travel/orders", async (req, res) => {
       summary: body.summary ? String(body.summary).slice(0, 400) : undefined,
       payload: body.payload && typeof body.payload === "object" ? body.payload : {},
       payment,
-      mark_paid: Boolean(body.mark_paid || payment),
+      tracking_prefix: await getTrackingPrefix(),
     });
-    res.status(201).json({ ok: true, order: { id: order.id, status: order.status, amount: order.amount } });
+
+    const emailed = await sendOrderReceivedEmail(order);
+
+    res.status(201).json({
+      ok: true,
+      order: {
+        id: order.id,
+        tracking_code: order.tracking_code,
+        status: order.status,
+        amount: order.amount,
+      },
+      email_sent: emailed,
+    });
   } catch (err) {
     console.error("[visa] POST /travel/orders error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/** Public status lookup — needs both the reference and the applicant's email. */
+router.get(
+  "/travel/orders/track",
+  rateLimit({
+    name: "track",
+    windowMs: 10 * 60 * 1000,
+    max: 30,
+    message: "Too many lookups. Please try again shortly.",
+  }),
+  async (req, res) => {
+    try {
+      const code = String(req.query.code || "");
+      const email = String(req.query.email || "");
+      if (!code.trim() || !email.trim()) {
+        res.status(400).json({ error: "Reference and email are both required" });
+        return;
+      }
+
+      const order = await findOrderForTracking(code, email);
+      if (!order) {
+        // Same response whether the code is wrong or the email does not match,
+        // so this cannot be used to discover which references exist.
+        res.status(404).json({ error: "No application matches that reference and email" });
+        return;
+      }
+
+      res.json({
+        order: {
+          tracking_code: order.tracking_code,
+          status: order.status,
+          type: order.type,
+          country: order.country,
+          summary: order.summary,
+          amount: order.amount,
+          currency: order.currency,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          history: (order.status_history || []).map((h) => ({ status: h.status, at: h.at })),
+        },
+      });
+    } catch (err) {
+      console.error("[visa] GET /travel/orders/track error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 router.get("/travel/admin/orders", requireAdmin, async (_req, res) => {
   try {
@@ -982,7 +1090,19 @@ router.patch("/travel/admin/orders/:id", requireAdmin, async (req, res) => {
 
 const ADMIN_COOKIE = "tta_admin";
 
-router.post("/travel/admin/login", async (req, res) => {
+const IS_PRODUCTION = process.env["NODE_ENV"] === "production";
+/** Omitted off HTTPS so local development over http still keeps a session. */
+const COOKIE_SECURE = IS_PRODUCTION ? " Secure;" : "";
+
+router.post(
+  "/travel/admin/login",
+  rateLimit({
+    name: "admin-login",
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: "Too many sign-in attempts. Please wait before trying again.",
+  }),
+  async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!(await verifyAdminLogin(String(username || ""), String(password || "")))) {
@@ -991,16 +1111,20 @@ router.post("/travel/admin/login", async (req, res) => {
     }
     const token = createSessionToken();
     res.setHeader("Set-Cookie",
-      `${ADMIN_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+      `${ADMIN_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly;${COOKIE_SECURE} SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
     res.json({ ok: true });
   } catch (err) {
     console.error("[visa] POST /travel/admin/login error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
-});
+  },
+);
 
 router.post("/travel/admin/logout", (_req, res) => {
-  res.setHeader("Set-Cookie", `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.setHeader(
+    "Set-Cookie",
+    `${ADMIN_COOKIE}=; Path=/; HttpOnly;${COOKIE_SECURE} SameSite=Lax; Max-Age=0`,
+  );
   res.json({ ok: true });
 });
 
@@ -1225,5 +1349,18 @@ router.delete("/travel/admin/countries/:id/override", requireAdmin, async (req, 
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/** Country deep-link slugs for the sitemap; /{slug} resolves into the chat. */
+export async function listCountrySlugs(): Promise<string[]> {
+  const all = await loadAll();
+  return all
+    .filter((c) => (c as { is_active?: boolean }).is_active !== false)
+    .map(
+      (c) =>
+        ((c as RawCountry).slug || "").toLowerCase() ||
+        c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    )
+    .filter(Boolean);
+}
 
 export default router;
