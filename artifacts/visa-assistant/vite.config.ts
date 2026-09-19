@@ -36,22 +36,17 @@ export default defineConfig({
     // Dev-only: the overlay has no purpose in a production bundle.
     ...(process.env.NODE_ENV !== 'production' ? [runtimeErrorOverlay()] : []),
     {
-      name: 'noindex-headers',
+      // Dev and preview servers are not the public site; keep them out of search.
+      name: 'noindex-dev-headers',
       configureServer(server) {
         server.middlewares.use((_req, res, next) => {
-          res.setHeader(
-            'X-Robots-Tag',
-            'noindex, nofollow, noarchive, nosnippet, noimageindex',
-          );
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
           next();
         });
       },
       configurePreviewServer(server) {
         server.middlewares.use((_req, res, next) => {
-          res.setHeader(
-            'X-Robots-Tag',
-            'noindex, nofollow, noarchive, nosnippet, noimageindex',
-          );
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
           next();
         });
       },
