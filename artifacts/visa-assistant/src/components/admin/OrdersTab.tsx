@@ -190,6 +190,11 @@ export default function OrdersTab({
                       {ORDER_TYPE_LABELS[o.type] || o.type}
                       {o.option_title ? ` · ${o.option_title}` : ''}
                     </div>
+                    {o.tracking_code && (
+                      <div className="text-[11px] font-mono text-gray-400 mt-0.5">
+                        {o.tracking_code}
+                      </div>
+                    )}
                   </div>
                   <StatusBadge status={o.status} />
                 </div>
@@ -212,11 +217,14 @@ export default function OrdersTab({
           <div className="space-y-4">
             <div>
               <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                Order
+                Reference
               </div>
               <div className="font-bold text-[16px] text-gray-900 mt-1 break-all">
-                {selected.id}
+                {selected.tracking_code || selected.id}
               </div>
+              {selected.tracking_code && (
+                <div className="text-[11px] text-gray-400 mt-0.5 break-all">{selected.id}</div>
+              )}
               <div className="mt-2">
                 <StatusBadge status={selected.status} />
               </div>

@@ -1,11 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { useSettings } from '@/lib/settings';
-
-function makeTracking(prefix: string) {
-  const raw = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
-  return `${(prefix || 'TEG').replace(/[^A-Z0-9]/gi, '').slice(0, 6) || 'TEG'}-${raw.slice(-8)}`;
-}
+import { submitOrder } from '@/lib/orders';
 
 /**
  * Application start page (route: /next).
@@ -20,6 +16,8 @@ export default function NextPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [tracking, setTracking] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const bottomPad = 'max(28px, calc(16px + env(safe-area-inset-bottom)))';
 
@@ -27,30 +25,41 @@ export default function NextPage() {
     setValues((prev) => ({ ...prev, [name]: v }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = makeTracking(apply.tracking_prefix || 'TEG');
-    setTracking(code);
-    try {
-      localStorage.setItem(
-        'teg_last_application',
-        JSON.stringify({
-          tracking: code,
-          email: values.email || '',
-          full_name: values.full_name || '',
-          at: new Date().toISOString(),
-        }),
-      );
-    } catch {
-      /* ignore */
+    const email = (values.email || '').trim();
+    if (!email) {
+      setError('An email address is required so we can send your reference.');
+      return;
     }
-    setSubmitted(true);
+    setBusy(true);
+    setError('');
+    try {
+      // The reference comes from the server so /track can find this application.
+      const order = await submitOrder({
+        type: 'entry',
+        amount: 0,
+        email,
+        customer_name: values.full_name || undefined,
+        phone: values.phone || undefined,
+        summary: apply.title || 'Application',
+        payload: { ...values, source: 'apply_page' },
+      });
+      setTracking(order.tracking_code);
+      setSubmitted(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not submit your application. Please try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const emailNote = useMemo(() => {
     const note =
       apply.success_email_note ||
-      'A confirmation was sent to {email}. Keep your tracking number for status updates.';
+      'Keep this reference — you need it together with {email} to check your status on the Track page.';
     return note
       .replace(/\{email\}/gi, values.email || 'your email')
       .replace(/\{tracking\}/gi, tracking);
@@ -183,17 +192,20 @@ export default function NextPage() {
                     required={field.required}
                     value={values[field.name] ?? ''}
                     onChange={(e) => handleChange(field.name, e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[14px] text-gray-800 bg-gray-50 outline-none focus:border-gray-400"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-800 bg-gray-50 outline-none focus:border-gray-400"
                   />
                 </div>
               ))}
 
+              {error && <p className="text-[13px] text-red-600">{error}</p>}
+
               <button
                 type="submit"
-                className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-1 transition-opacity hover:opacity-90"
+                disabled={busy}
+                className="block w-full text-center font-bold text-[15px] text-white py-3.5 rounded-xl mt-1 transition-opacity hover:opacity-90 disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg, #C73E54, #A82E42)' }}
               >
-                SUBMIT
+                {busy ? 'SUBMITTING…' : 'SUBMIT'}
               </button>
             </form>
           </>

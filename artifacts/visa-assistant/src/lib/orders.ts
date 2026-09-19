@@ -38,6 +38,8 @@ export interface StatusEvent {
 
 export interface TravelOrder {
   id: string;
+  /** Customer-facing reference shown on /track. */
+  tracking_code: string;
   created_at: string;
   updated_at: string;
   type: OrderType;
@@ -76,12 +78,17 @@ export interface CreateOrderBody {
   option_index?: number;
   summary?: string;
   payload?: Record<string, unknown>;
-  payment?: { cardholder?: string; last4?: string };
-  mark_paid?: boolean;
 }
 
-/** Public intake — saves application + payment-form meta for admin. */
-export async function submitOrder(body: CreateOrderBody): Promise<{ id: string; status: string }> {
+export interface SubmittedOrder {
+  id: string;
+  /** Customer-facing reference used on /track. */
+  tracking_code: string;
+  status: string;
+}
+
+/** Public intake — records the application and returns its tracking reference. */
+export async function submitOrder(body: CreateOrderBody): Promise<SubmittedOrder> {
   const res = await fetch('/api/travel/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -97,6 +104,37 @@ export async function submitOrder(body: CreateOrderBody): Promise<{ id: string; 
     }
     throw new Error(msg);
   }
-  const data = (await res.json()) as { order: { id: string; status: string } };
+  const data = (await res.json()) as { order: SubmittedOrder };
+  return data.order;
+}
+
+export interface TrackedOrder {
+  tracking_code: string;
+  status: string;
+  type: string;
+  country?: string;
+  summary?: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+  history: { status: string; at: string }[];
+}
+
+/** Public status lookup. The server requires the reference and email to match. */
+export async function trackOrder(code: string, email: string): Promise<TrackedOrder> {
+  const params = new URLSearchParams({ code, email });
+  const res = await fetch(`/api/travel/orders/track?${params.toString()}`);
+  if (!res.ok) {
+    let msg = 'No application matches that reference and email.';
+    try {
+      const data = await res.json();
+      if (data?.error) msg = data.error;
+    } catch {
+      /* keep the default message */
+    }
+    throw new Error(msg);
+  }
+  const data = (await res.json()) as { order: TrackedOrder };
   return data.order;
 }
