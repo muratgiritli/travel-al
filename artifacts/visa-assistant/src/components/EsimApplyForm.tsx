@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { EsimPlan } from '@/lib/settings';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -123,12 +123,13 @@ export default function EsimApplyForm({
 
   if (submitted) {
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={plan.price}
         currency={cur}
-        summary={`eSIM · ${plan.name} · ${email}`}
+        email={email}
+        summary={`eSIM · ${plan.name}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'esim',
             amount: plan.price,
@@ -148,10 +149,8 @@ export default function EsimApplyForm({
               firstName,
               lastName,
             },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );

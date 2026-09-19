@@ -24,6 +24,8 @@ export interface StatusEvent {
 
 export interface TravelOrder {
   id: string;
+  /** Customer-facing reference, e.g. TEG-4K2P9XQ1. Unique across orders. */
+  tracking_code: string;
   created_at: string;
   updated_at: string;
   type: OrderType;
@@ -67,14 +69,29 @@ export interface CreateOrderInput {
     cardholder?: string;
     last4?: string;
   };
-  /** If payment form was submitted, start as paid */
-  mark_paid?: boolean;
+  /** Customer-facing code prefix, from admin apply settings. */
+  tracking_prefix?: string;
 }
 
 const ORDERS_KEY = "travel_orders";
 
 function newId(): string {
   return `ord_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`;
+}
+
+/** Ambiguous characters (0/O, 1/I) are excluded so codes survive being read aloud. */
+const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function newTrackingCode(prefix: string, taken: Set<string>): string {
+  const clean = (prefix || "TEG").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6) || "TEG";
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const bytes = randomBytes(8);
+    let body = "";
+    for (const b of bytes) body += CODE_ALPHABET[b % CODE_ALPHABET.length];
+    const code = `${clean}-${body}`;
+    if (!taken.has(code)) return code;
+  }
+  return `${clean}-${Date.now().toString(36).toUpperCase()}`;
 }
 
 async function readAll(): Promise<TravelOrder[]> {
@@ -113,11 +130,38 @@ export async function getOrder(id: string): Promise<TravelOrder | null> {
   return all.find((o) => o.id === id) || null;
 }
 
+/**
+ * Public tracking lookup. The email must match the one on the order, so a
+ * guessed code alone never reveals an application.
+ */
+export async function findOrderForTracking(
+  code: string,
+  email: string,
+): Promise<TravelOrder | null> {
+  const wanted = String(code || "").trim().toUpperCase();
+  const wantedEmail = String(email || "").trim().toLowerCase();
+  if (!wanted || !wantedEmail) return null;
+  const all = await readAll();
+  return (
+    all.find(
+      (o) =>
+        (o.tracking_code || "").toUpperCase() === wanted &&
+        (o.email || "").toLowerCase() === wantedEmail,
+    ) || null
+  );
+}
+
 export async function createOrder(input: CreateOrderInput): Promise<TravelOrder> {
   const now = new Date().toISOString();
-  const status: OrderStatus = input.mark_paid ? "paid" : "new";
+  const all = await readAll();
+  // Nothing is charged here, so an order is never created already paid.
+  const status: OrderStatus = "new";
   const order: TravelOrder = {
     id: newId(),
+    tracking_code: newTrackingCode(
+      input.tracking_prefix || "TEG",
+      new Set(all.map((o) => o.tracking_code).filter(Boolean)),
+    ),
     created_at: now,
     updated_at: now,
     type: input.type,
@@ -143,7 +187,6 @@ export async function createOrder(input: CreateOrderInput): Promise<TravelOrder>
         }
       : undefined,
   };
-  const all = await readAll();
   all.unshift(order);
   await writeAll(all);
   return order;

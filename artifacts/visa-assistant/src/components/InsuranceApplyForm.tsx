@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -176,12 +176,13 @@ export default function InsuranceApplyForm({
   if (submitted) {
     const primary = travelers[0];
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={total}
         currency={currency}
+        email={email}
         summary={`Travel insurance · ${travelerCount} traveler${travelerCount === 1 ? '' : 's'} · ${days} day${days === 1 ? '' : 's'}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'insurance',
             amount: total,
@@ -191,10 +192,8 @@ export default function InsuranceApplyForm({
             customer_name: `${primary.firstName} ${primary.lastName}`.trim(),
             summary: `Insurance · ${days} days · ${travelerCount} traveler(s)`,
             payload: { startDate, endDate, days, travelers, dailyPrice },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );

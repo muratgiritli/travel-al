@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { OptionCard } from '@/lib/settings';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -157,12 +157,13 @@ export default function StickerApplyForm({
 
   if (submitted) {
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={unitPrice}
         currency={cur}
+        email={email}
         summary={`${option.title} · ${firstName} ${surname}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'sticker',
             amount: unitPrice,
@@ -186,10 +187,8 @@ export default function StickerApplyForm({
               birthDate,
               address,
             },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );

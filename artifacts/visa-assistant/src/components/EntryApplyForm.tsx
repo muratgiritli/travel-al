@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { OptionCard } from '@/lib/settings';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -387,12 +387,13 @@ export default function EntryApplyForm({
   if (submitted) {
     const primary = applicants[0];
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={grandTotal}
         currency={currency}
-        summary={`Entry + insurance · ${personCount} applicant${personCount === 1 ? '' : 's'} · ${email}`}
+        email={email}
+        summary={`Entry + insurance · ${personCount} applicant${personCount === 1 ? '' : 's'}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'entry',
             amount: grandTotal,
@@ -414,10 +415,8 @@ export default function EntryApplyForm({
               address,
               applicants,
             },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );
