@@ -4,7 +4,10 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
-import { listCountrySlugs } from "./routes/visa";
+import { getCountrySeo, listCountrySlugs } from "./routes/visa";
+import { countryBodyHtml, PageRenderer } from "./lib/renderPage";
+import { findOrderForTracking, updateOrderStatus } from "./lib/ordersStore";
+import { verifyWebhook } from "./lib/stripe";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -59,6 +62,44 @@ app.use((_req, res, next) => {
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   next();
 });
+/**
+ * Stripe signs the exact bytes it sent, so this route needs the raw body and
+ * must be mounted before the JSON parser rewrites it.
+ */
+app.post(
+  "/api/travel/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const event = await verifyWebhook(
+      req.body as Buffer,
+      req.headers["stripe-signature"] as string | undefined,
+    );
+    if (!event) {
+      res.status(400).json({ error: "Invalid signature" });
+      return;
+    }
+
+    try {
+      if (event.type === "checkout.session.completed") {
+        const session = (event.data as { object?: Record<string, unknown> })?.object || {};
+        const code = String(session["client_reference_id"] || "");
+        const email = String(session["customer_email"] || "");
+        const order = code && email ? await findOrderForTracking(code, email) : null;
+        if (order) {
+          await updateOrderStatus(order.id, "paid", "Paid via Stripe Checkout");
+          logger.info({ trackingCode: order.tracking_code }, "order marked paid");
+        } else {
+          logger.warn({ code }, "Stripe webhook referenced an unknown order");
+        }
+      }
+      res.json({ received: true });
+    } catch (err) {
+      logger.error({ err }, "Stripe webhook handling failed");
+      res.status(500).json({ error: "Webhook handling failed" });
+    }
+  },
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -108,7 +149,22 @@ if (staticDir && existsSync(staticDir)) {
       },
     }),
   );
-  app.use((req, res, next) => {
+  const renderer = new PageRenderer(staticDir);
+
+  // Paths the SPA owns that must never be treated as a country slug.
+  const RESERVED_PATHS = new Set([
+    "/",
+    "/faq",
+    "/contact",
+    "/track",
+    "/privacy",
+    "/terms",
+    "/checkout",
+    "/next",
+    "/admin",
+  ]);
+
+  app.use(async (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       next();
       return;
@@ -117,9 +173,67 @@ if (staticDir && existsSync(staticDir)) {
       next();
       return;
     }
-    res.sendFile(path.join(staticDir, "index.html"), (err) => {
-      if (err) next(err);
-    });
+
+    const send = (html: string) => {
+      res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+      res.type("html").send(html);
+    };
+
+    try {
+      const slugMatch = /^\/([a-z0-9-]{2,60})\/?$/i.exec(req.path);
+      if (slugMatch && !RESERVED_PATHS.has(req.path.replace(/\/$/, "") || "/")) {
+        const seo = await getCountrySeo(slugMatch[1]);
+        if (seo) {
+          send(
+            renderer.render(
+              {
+                title: seo.title,
+                description: seo.description,
+                canonicalPath: `/${seo.slug}`,
+                bodyHtml: countryBodyHtml({
+                  name: seo.name,
+                  title: seo.title,
+                  paragraphs: seo.paragraphs,
+                }),
+                jsonLd: {
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: [
+                    {
+                      "@type": "Question",
+                      name: seo.title,
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: seo.paragraphs.join(" "),
+                      },
+                    },
+                  ],
+                },
+              },
+              SITE_URL,
+            ),
+          );
+          return;
+        }
+      }
+
+      send(
+        renderer.render(
+          {
+            title: "Türkiye Entry Guide — entry requirements, travel insurance and eSIM",
+            description:
+              "Check your Türkiye entry requirements by passport country, then arrange travel insurance and an eSIM in one place.",
+            canonicalPath: req.path === "/" ? "/" : req.path,
+          },
+          SITE_URL,
+        ),
+      );
+    } catch (err) {
+      logger.error({ err, path: req.path }, "page render failed");
+      res.sendFile(path.join(staticDir, "index.html"), (sendErr) => {
+        if (sendErr) next(sendErr);
+      });
+    }
   });
 }
 
