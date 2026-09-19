@@ -24,7 +24,15 @@ import {
   type OrderType,
 } from "../lib/ordersStore";
 import { rateLimit } from "../lib/rateLimit";
-import { isMailConfigured, orderReceivedEmail, sendMail } from "../lib/mailer";
+import { createCheckoutSession, isStripeConfigured } from "../lib/stripe";
+import {
+  adminNotifyAddress,
+  isMailConfigured,
+  newOrderAdminEmail,
+  orderReceivedEmail,
+  sendMail,
+  statusChangeEmail,
+} from "../lib/mailer";
 
 // Prefer the Replit AI Integrations proxy (no user API key / credits needed);
 // fall back to a direct OpenAI key if the proxy env vars are missing.
@@ -553,6 +561,8 @@ function publicSettings(s: SiteSettings) {
     brand: s.brand,
     esim: s.esim,
     trust: s.trust,
+    legal: s.legal,
+    integrations: s.integrations,
   };
 }
 
@@ -884,30 +894,83 @@ async function getTrackingPrefix(): Promise<string> {
   }
 }
 
+function publicSiteUrl(): string {
+  return process.env["PUBLIC_SITE_URL"] || "https://turkiyetraveloffice.com";
+}
+
+async function siteName(): Promise<string> {
+  try {
+    const settings = await getSettings();
+    return (settings.brand as { site_name?: string } | undefined)?.site_name
+      || "Türkiye Travel Office";
+  } catch {
+    return "Türkiye Travel Office";
+  }
+}
+
 /** Best-effort receipt; a mail failure must never fail the application. */
 async function sendOrderReceivedEmail(order: {
   email: string;
   tracking_code: string;
+  type: string;
+  country?: string;
+  customer_name?: string;
   summary?: string;
   amount: number;
   currency: string;
 }): Promise<boolean> {
   if (!isMailConfigured()) return false;
   try {
-    const settings = await getSettings();
-    const brand = settings.brand as { site_name?: string } | undefined;
+    const name = await siteName();
     const mail = orderReceivedEmail({
       trackingCode: order.tracking_code,
       summary: order.summary,
       amount: order.amount,
       currency: order.currency,
-      siteName: brand?.site_name || "Türkiye Travel Office",
-      siteUrl: process.env["PUBLIC_SITE_URL"] || "https://turkiyetraveloffice.com",
+      siteName: name,
+      siteUrl: publicSiteUrl(),
     });
-    return await sendMail({ to: order.email, ...mail });
+    const sent = await sendMail({ to: order.email, ...mail });
+
+    const notify = adminNotifyAddress();
+    if (notify) {
+      const adminMail = newOrderAdminEmail({
+        trackingCode: order.tracking_code,
+        type: order.type,
+        summary: order.summary,
+        amount: order.amount,
+        currency: order.currency,
+        email: order.email,
+        customerName: order.customer_name,
+        country: order.country,
+        siteUrl: publicSiteUrl(),
+      });
+      void sendMail({ to: notify, ...adminMail });
+    }
+    return sent;
   } catch (err) {
     console.error("[visa] order email failed:", err);
     return false;
+  }
+}
+
+/** Tells the applicant their status moved; silent for statuses without copy. */
+async function sendStatusChangeEmail(
+  order: { email: string; tracking_code: string; status: string },
+  note?: string,
+): Promise<void> {
+  if (!isMailConfigured()) return;
+  try {
+    const mail = statusChangeEmail({
+      trackingCode: order.tracking_code,
+      status: order.status,
+      note,
+      siteName: await siteName(),
+      siteUrl: publicSiteUrl(),
+    });
+    if (mail) await sendMail({ to: order.email, ...mail });
+  } catch (err) {
+    console.error("[visa] status email failed:", err);
   }
 }
 
@@ -979,6 +1042,50 @@ router.post("/travel/orders", createOrderLimiter, async (req, res) => {
   }
 });
 
+/**
+ * Starts a hosted Stripe Checkout for an existing order.
+ * 404s while Stripe is unconfigured so the UI simply never offers the option.
+ */
+router.post(
+  "/travel/orders/:code/checkout",
+  rateLimit({ name: "checkout", windowMs: 10 * 60 * 1000, max: 20 }),
+  async (req, res) => {
+    try {
+      if (!isStripeConfigured()) {
+        res.status(404).json({ error: "Online payment is not enabled" });
+        return;
+      }
+      const email = String((req.body || {}).email || "");
+      const order = await findOrderForTracking(String(req.params.code), email);
+      if (!order) {
+        res.status(404).json({ error: "No application matches that reference and email" });
+        return;
+      }
+      if (order.status !== "new" && order.status !== "approved") {
+        res.status(409).json({ error: "This application is not awaiting payment" });
+        return;
+      }
+
+      const url = await createCheckoutSession({
+        trackingCode: order.tracking_code,
+        description: order.summary || `Application ${order.tracking_code}`,
+        amount: order.amount,
+        currency: order.currency,
+        customerEmail: order.email,
+        siteUrl: publicSiteUrl(),
+      });
+      if (!url) {
+        res.status(502).json({ error: "Could not start payment. Please try again." });
+        return;
+      }
+      res.json({ url });
+    } catch (err) {
+      console.error("[visa] checkout error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
 /** Public status lookup — needs both the reference and the applicant's email. */
 router.get(
   "/travel/orders/track",
@@ -1040,6 +1147,48 @@ router.get("/travel/admin/orders", requireAdmin, async (_req, res) => {
   }
 });
 
+router.get("/travel/admin/orders.csv", requireAdmin, async (_req, res) => {
+  try {
+    const orders = await listOrders();
+    const columns: [string, (o: (typeof orders)[number]) => string][] = [
+      ["reference", (o) => o.tracking_code],
+      ["created_at", (o) => o.created_at],
+      ["updated_at", (o) => o.updated_at],
+      ["status", (o) => o.status],
+      ["type", (o) => o.type],
+      ["amount", (o) => String(o.amount)],
+      ["currency", (o) => o.currency],
+      ["customer_name", (o) => o.customer_name || ""],
+      ["email", (o) => o.email],
+      ["phone", (o) => o.phone || ""],
+      ["country", (o) => o.country || ""],
+      ["option", (o) => o.option_title || ""],
+      ["summary", (o) => o.summary || ""],
+      ["admin_note", (o) => o.admin_note || ""],
+    ];
+
+    // A leading =, +, - or @ makes spreadsheets treat the value as a formula.
+    const cell = (value: string) => {
+      const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+
+    const lines = [
+      columns.map(([name]) => cell(name)).join(","),
+      ...orders.map((o) => columns.map(([, get]) => cell(get(o))).join(",")),
+    ];
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="orders-${stamp}.csv"`);
+    // BOM so Excel opens UTF-8 names correctly.
+    res.send(`\uFEFF${lines.join("\r\n")}\r\n`);
+  } catch (err) {
+    console.error("[visa] GET admin/orders.csv error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/travel/admin/orders/:id", requireAdmin, async (req, res) => {
   try {
     const order = await getOrder(String(req.params.id));
@@ -1072,12 +1221,14 @@ router.patch("/travel/admin/orders/:id", requireAdmin, async (req, res) => {
         res.status(400).json({ error: "Invalid status" });
         return;
       }
+      const note = body.note ? String(body.note).slice(0, 400) : undefined;
       order = await updateOrderStatus(
         id,
         status,
-        body.note ? String(body.note).slice(0, 400) : undefined,
+        note,
         body.admin_note !== undefined ? String(body.admin_note) : undefined,
       );
+      if (order) void sendStatusChangeEmail(order, note);
     }
     res.json({ ok: true, order });
   } catch (err) {
@@ -1350,17 +1501,81 @@ router.delete("/travel/admin/countries/:id/override", requireAdmin, async (req, 
   }
 });
 
+function countrySlug(c: { name: string; slug?: string }): string {
+  return (
+    String(c.slug || "").toLowerCase() ||
+    c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  );
+}
+
 /** Country deep-link slugs for the sitemap; /{slug} resolves into the chat. */
 export async function listCountrySlugs(): Promise<string[]> {
   const all = await loadAll();
   return all
     .filter((c) => (c as { is_active?: boolean }).is_active !== false)
-    .map(
-      (c) =>
-        ((c as RawCountry).slug || "").toLowerCase() ||
-        c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-    )
+    .map((c) => countrySlug(c))
     .filter(Boolean);
+}
+
+export interface CountrySeo {
+  slug: string;
+  name: string;
+  title: string;
+  description: string;
+  /** Crawlable summary rendered into the served HTML. */
+  paragraphs: string[];
+  insuranceRequired: boolean;
+}
+
+/**
+ * Per-country metadata and copy for the server-rendered page head and body.
+ *
+ * Without this every /{slug} URL returned identical HTML, so search engines
+ * folded all of them into the homepage and none could rank on their own.
+ */
+export async function getCountrySeo(slug: string): Promise<CountrySeo | null> {
+  const wanted = String(slug || "").toLowerCase();
+  if (!wanted) return null;
+  const all = await loadAll();
+  const country = all.find(
+    (c) => countrySlug(c) === wanted || c.id === wanted || c.iso2.toLowerCase() === wanted,
+  );
+  if (!country || (country as { is_active?: boolean }).is_active === false) return null;
+
+  const card = depermitDeep(buildCard(country)) as ReturnType<typeof buildCard>;
+  if (!card) return null;
+
+  const name = country.name;
+  const stay = card.top_block.max_stay_text || "";
+  const validity = card.top_block.passport_validity_text || "";
+  const insuranceRequired = Boolean(card.insurance_required);
+
+  const paragraphs = [
+    card.visa_status || card.headline || "",
+    stay ? `Maximum stay for ${name} passport holders: ${stay}.` : "",
+    validity ? `Passport validity required: ${validity}.` : "",
+    insuranceRequired
+      ? "Travel health insurance is required for the full duration of the stay."
+      : "",
+    ...(card.body || []),
+  ]
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+
+  const description =
+    `Türkiye entry requirements for ${name} passport holders` +
+    (stay ? ` — stay up to ${stay}` : "") +
+    (insuranceRequired ? ", travel insurance required" : "") +
+    ". Check the rules and apply online.";
+
+  return {
+    slug: countrySlug(country),
+    name,
+    title: `Türkiye entry requirements for ${name} passport holders`,
+    description: description.slice(0, 300),
+    paragraphs: paragraphs.slice(0, 6),
+    insuranceRequired,
+  };
 }
 
 export default router;
