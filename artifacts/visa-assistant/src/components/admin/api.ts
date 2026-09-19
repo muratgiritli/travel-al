@@ -361,6 +361,8 @@ export interface SiteSettings {
   option_card_defaults: Record<Category, OptionCard[]>;
   esim: EsimSettings;
   trust: TrustSettings;
+  legal: import('@/lib/settings').LegalSettings;
+  integrations: import('@/lib/settings').IntegrationSettings;
   /** Admin-only — used server-side to ground chat answers. */
   knowledge?: KnowledgeSettings;
 }

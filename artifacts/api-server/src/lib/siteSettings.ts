@@ -267,6 +267,38 @@ export const DEFAULT_SETTINGS = {
     cta_href: '/next',
     plans: DEFAULT_ESIM_PLANS,
   },
+  /**
+   * Seller identity and legal copy.
+   *
+   * Turkish distance-selling rules require the seller's legal name, address,
+   * tax details and a cancellation/refund policy to be published. These start
+   * empty on purpose: the footer and legal pages show a "not yet published"
+   * notice rather than invented company details.
+   */
+  legal: {
+    company_name: "",
+    legal_name: "",
+    address: "",
+    tax_office: "",
+    tax_number: "",
+    mersis_no: "",
+    trade_registry_no: "",
+    email: "",
+    phone: "",
+    /** Markdown-free plain text; blank falls back to a generic notice. */
+    refund_policy: "",
+    distance_sales_agreement: "",
+    kvkk_notice: "",
+    cookie_notice:
+      "We use only the cookies needed to run this site and remember your language. No advertising cookies are set.",
+  },
+  integrations: {
+    /** Plausible domain, e.g. turkiyetraveloffice.com. Empty disables analytics. */
+    plausible_domain: "",
+    /** Digits only, e.g. 905551112233. Empty hides the support button. */
+    whatsapp_number: "",
+    whatsapp_message: "Hello, I have a question about travelling to Türkiye.",
+  },
   /** Server-only AI grounding bank — not exposed on public /settings. */
   knowledge: KNOWLEDGE_SEED,
 };

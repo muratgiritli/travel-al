@@ -455,6 +455,52 @@ const ROWS: Record<string, Row> = {
     fr: 'Les demandes sont traitées par ordre d’arrivée. Suivez l’avancement sur la page de suivi.',
     ru: 'Заявки рассматриваются в порядке поступления. Статус доступен на странице отслеживания.',
   },
+  'cookie.label': {
+    en: 'Cookie notice', tr: 'Çerez bildirimi', ar: 'إشعار ملفات الارتباط',
+    es: 'Aviso de cookies', de: 'Cookie-Hinweis', fr: 'Avis sur les cookies',
+    ru: 'Уведомление о cookie',
+  },
+  'cookie.text': {
+    en: 'We use only the cookies needed to run this site and remember your language. No advertising cookies are set.',
+    tr: 'Yalnızca sitenin çalışması ve dil tercihiniz için gereken çerezleri kullanıyoruz. Reklam çerezi kullanılmaz.',
+    ar: 'نستخدم فقط ملفات الارتباط اللازمة لتشغيل الموقع وتذكّر لغتك. لا نستخدم ملفات ارتباط إعلانية.',
+    es: 'Solo usamos las cookies necesarias para el sitio y recordar su idioma. No usamos cookies publicitarias.',
+    de: 'Wir verwenden nur die für den Betrieb und Ihre Sprachwahl nötigen Cookies. Keine Werbe-Cookies.',
+    fr: 'Nous n’utilisons que les cookies nécessaires au site et à votre langue. Aucun cookie publicitaire.',
+    ru: 'Мы используем только необходимые cookie и сохраняем выбор языка. Рекламных cookie нет.',
+  },
+  'cookie.ok': {
+    en: 'Got it', tr: 'Anladım', ar: 'حسناً', es: 'Entendido', de: 'Verstanden',
+    fr: 'J’ai compris', ru: 'Понятно',
+  },
+  'cookie.privacy': {
+    en: 'Privacy policy', tr: 'Gizlilik politikası', ar: 'سياسة الخصوصية',
+    es: 'Política de privacidad', de: 'Datenschutz', fr: 'Confidentialité',
+    ru: 'Политика конфиденциальности',
+  },
+  'support.whatsapp': {
+    en: 'Chat on WhatsApp', tr: 'WhatsApp’tan yazın', ar: 'تواصل عبر واتساب',
+    es: 'Escríbenos por WhatsApp', de: 'Auf WhatsApp schreiben',
+    fr: 'Écrire sur WhatsApp', ru: 'Написать в WhatsApp',
+  },
+  'legal.notPublished': {
+    en: 'This policy has not been published yet. Contact us for details before ordering.',
+    tr: 'Bu metin henüz yayımlanmadı. Sipariş öncesi bilgi için bize ulaşın.',
+    ar: 'لم يتم نشر هذه السياسة بعد. تواصل معنا قبل الطلب.',
+    es: 'Esta política aún no se ha publicado. Contáctenos antes de pedir.',
+    de: 'Diese Richtlinie ist noch nicht veröffentlicht. Bitte vor einer Bestellung Kontakt aufnehmen.',
+    fr: 'Cette politique n’est pas encore publiée. Contactez-nous avant de commander.',
+    ru: 'Этот документ ещё не опубликован. Свяжитесь с нами перед заказом.',
+  },
+  'legal.sellerInfo': {
+    en: 'Seller information', tr: 'Satıcı bilgileri', ar: 'معلومات البائع',
+    es: 'Información del vendedor', de: 'Verkäuferangaben', fr: 'Informations du vendeur',
+    ru: 'Сведения о продавце',
+  },
+  'footer.refund': {
+    en: 'Refunds', tr: 'İade', ar: 'الاسترداد', es: 'Reembolsos', de: 'Rückerstattung',
+    fr: 'Remboursements', ru: 'Возврат',
+  },
   'track.reference': {
     en: 'Reference number', tr: 'Referans numarası', ar: 'الرقم المرجعي',
     es: 'Número de referencia', de: 'Referenznummer', fr: 'Numéro de référence', ru: 'Номер заявки',

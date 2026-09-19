@@ -1,7 +1,10 @@
 import { lazy, Suspense } from 'react';
 import { Route, Switch, Router as WouterRouter, Redirect, useParams } from 'wouter';
 import EntryChat from '@/pages/EntryChat';
+import CookieNotice from '@/components/CookieNotice';
+import WhatsAppButton from '@/components/WhatsAppButton';
 import { legacyPathSegment } from '@/lib/wireCodes';
+import { useAnalytics } from '@/lib/useAnalytics';
 import { I18nProvider } from '@/lib/i18n';
 
 // Only the chat entry point ships in the first bundle; everything else is
@@ -14,6 +17,8 @@ const ContactPage = lazy(() => import('@/pages/ContactPage'));
 const TrackPage = lazy(() => import('@/pages/TrackPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
+const RefundPage = lazy(() => import('@/pages/RefundPage'));
+const DistanceSalesPage = lazy(() => import('@/pages/DistanceSalesPage'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
 const LEGACY = legacyPathSegment();
@@ -25,6 +30,8 @@ const RESERVED = new Set([
   'contact',
   'privacy',
   'terms',
+  'refunds',
+  'distance-sales',
   'checkout',
   'next',
   'admin',
@@ -69,9 +76,24 @@ function Router() {
       <Route path="/track" component={TrackPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
+      <Route path="/refunds" component={RefundPage} />
+      <Route path="/distance-sales" component={DistanceSalesPage} />
       <Route path="/:countrySlug" component={CountryDeepLink} />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function Shell() {
+  useAnalytics();
+  return (
+    <>
+      <Suspense fallback={<RouteFallback />}>
+        <Router />
+      </Suspense>
+      <WhatsAppButton />
+      <CookieNotice />
+    </>
   );
 }
 
@@ -79,9 +101,7 @@ export default function App() {
   return (
     <I18nProvider>
       <WouterRouter base="">
-        <Suspense fallback={<RouteFallback />}>
-          <Router />
-        </Suspense>
+        <Shell />
       </WouterRouter>
     </I18nProvider>
   );

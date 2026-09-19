@@ -8,6 +8,7 @@ export default function SiteFooter() {
     { href: '/contact', label: t('footer.contact') },
     { href: '/privacy', label: t('footer.privacy') },
     { href: '/terms', label: t('footer.terms') },
+    { href: '/refunds', label: t('footer.refund') },
     { href: '/track', label: t('footer.track') },
   ];
 

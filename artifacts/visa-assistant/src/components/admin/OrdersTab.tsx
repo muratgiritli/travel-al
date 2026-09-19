@@ -135,7 +135,16 @@ export default function OrdersTab({
               {filtered.length} shown · {orders.length} total
             </p>
           </div>
-          <Button onClick={load}>Refresh</Button>
+          <div className="flex gap-2">
+            <a
+              href="/api/travel/admin/orders.csv"
+              className="inline-flex items-center rounded-xl px-3.5 py-2 text-[13px] font-semibold"
+              style={{ background: '#fff', color: '#374151', border: '1px solid #e5e7eb' }}
+            >
+              Export CSV
+            </a>
+            <Button onClick={load}>Refresh</Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">

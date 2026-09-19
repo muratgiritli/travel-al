@@ -15,8 +15,9 @@ import EsimTab from '@/components/admin/EsimTab';
 import TrustTab from '@/components/admin/TrustTab';
 import KnowledgeTab from '@/components/admin/KnowledgeTab';
 import OrdersTab from '@/components/admin/OrdersTab';
+import LegalTab from '@/components/admin/LegalTab';
 
-type Tab = 'dashboard' | 'orders' | 'countries' | 'pricing' | 'esim' | 'trust' | 'knowledge' | 'content' | 'chat' | 'apply' | 'brand' | 'security';
+type Tab = 'dashboard' | 'orders' | 'countries' | 'pricing' | 'esim' | 'trust' | 'knowledge' | 'content' | 'chat' | 'apply' | 'brand' | 'legal' | 'security';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
@@ -30,6 +31,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'chat', label: 'Chat messages', emoji: '💬' },
   { id: 'apply', label: 'Apply', emoji: '📋' },
   { id: 'brand', label: 'Brand', emoji: '🎨' },
+  { id: 'legal', label: 'Legal & integrations', emoji: '⚖️' },
   { id: 'security', label: 'Security', emoji: '🔒' },
 ];
 
@@ -151,6 +153,7 @@ export default function Admin() {
         {tab === 'chat' && <ChatTab {...tabProps} />}
         {tab === 'apply' && <ApplyTab {...tabProps} />}
         {tab === 'brand' && <BrandTab {...tabProps} />}
+        {tab === 'legal' && <LegalTab {...tabProps} />}
         {tab === 'security' && <SecurityTab currentUsername={username} onUnauthorized={onUnauthorized} />}
       </div>
     </div>
