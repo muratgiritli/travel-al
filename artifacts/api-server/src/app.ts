@@ -145,10 +145,11 @@ app.get("/sitemap.xml", async (_req, res) => {
 
 const staticDir = process.env["STATIC_DIR"];
 if (staticDir && existsSync(staticDir)) {
-  app.use(
-    express.static(staticDir, {
-      index: "index.html",
-      setHeaders(res, filePath) {
+      app.use(
+        express.static(staticDir, {
+          // `/` must fall through so the renderer can attach homepage JSON-LD.
+          index: false,
+          setHeaders(res, filePath) {
         // Vite fingerprints everything under /assets, so it can be pinned.
         if (filePath.includes(`${path.sep}assets${path.sep}`)) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
