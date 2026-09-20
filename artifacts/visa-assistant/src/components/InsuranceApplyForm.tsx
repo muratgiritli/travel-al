@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -81,7 +81,7 @@ function Field({
         autoComplete={autoComplete}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+        className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
         style={{ border: '1px solid #E5E7EB', background: '#F9FAFB' }}
       />
     </label>
@@ -176,12 +176,13 @@ export default function InsuranceApplyForm({
   if (submitted) {
     const primary = travelers[0];
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={total}
         currency={currency}
+        email={email}
         summary={`Travel insurance · ${travelerCount} traveler${travelerCount === 1 ? '' : 's'} · ${days} day${days === 1 ? '' : 's'}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'insurance',
             amount: total,
@@ -191,10 +192,8 @@ export default function InsuranceApplyForm({
             customer_name: `${primary.firstName} ${primary.lastName}`.trim(),
             summary: `Insurance · ${days} days · ${travelerCount} traveler(s)`,
             payload: { startDate, endDate, days, travelers, dailyPrice },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );
@@ -339,7 +338,7 @@ export default function InsuranceApplyForm({
                 <select
                   value={trv.birthYear}
                   onChange={(e) => updateTraveler(i, { birthYear: e.target.value })}
-                  className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+                  className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
                   style={{ border: '1px solid #E5E7EB', background: '#fff' }}
                 >
                   <option value="">{t('ins.year')}</option>

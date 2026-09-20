@@ -178,6 +178,34 @@ export interface EsimSettings {
   cta_href: string;
   plans: EsimPlan[];
 }
+/** Seller identity and policy copy required for selling online from Türkiye. */
+export interface LegalSettings {
+  company_name: string;
+  legal_name: string;
+  address: string;
+  tax_office: string;
+  tax_number: string;
+  mersis_no: string;
+  trade_registry_no: string;
+  email: string;
+  phone: string;
+  refund_policy: string;
+  distance_sales_agreement: string;
+  kvkk_notice: string;
+  cookie_notice: string;
+}
+
+export interface IntegrationSettings {
+  plausible_domain: string;
+  whatsapp_number: string;
+  whatsapp_message: string;
+}
+
+/** Runtime flags derived from server env — never stored in admin settings. */
+export interface FeatureFlags {
+  stripe_enabled: boolean;
+}
+
 export interface SiteSettings {
   pricing: PricingSettings;
   chat: ChatSettings;
@@ -186,6 +214,9 @@ export interface SiteSettings {
   brand: BrandSettings;
   esim: EsimSettings;
   trust: TrustSettings;
+  legal: LegalSettings;
+  integrations: IntegrationSettings;
+  features: FeatureFlags;
 }
 
 /** Admin-editable offer/option card returned by GET /api/travel/countries/:id. */
@@ -343,6 +374,29 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     cta_href: '/next',
     plans: [],
   },
+  legal: {
+    company_name: '',
+    legal_name: '',
+    address: '',
+    tax_office: '',
+    tax_number: '',
+    mersis_no: '',
+    trade_registry_no: '',
+    email: '',
+    phone: '',
+    refund_policy: '',
+    distance_sales_agreement: '',
+    kvkk_notice: '',
+    cookie_notice: '',
+  },
+  integrations: {
+    plausible_domain: '',
+    whatsapp_number: '',
+    whatsapp_message: '',
+  },
+  features: {
+    stripe_enabled: false,
+  },
 };
 
 // ─── In-module cache + fetcher ────────────────────────────────────────────────
@@ -417,6 +471,9 @@ export function fetchSettings(): Promise<SiteSettings> {
           trust_lines: d.trust?.trust_lines?.length ? d.trust.trust_lines : [],
           faq: d.trust?.faq?.length ? d.trust.faq : [],
         },
+        legal: { ...DEFAULT_SETTINGS.legal, ...(d.legal ?? {}) },
+        integrations: { ...DEFAULT_SETTINGS.integrations, ...(d.integrations ?? {}) },
+        features: { ...DEFAULT_SETTINGS.features, ...(d.features ?? {}) },
       };
       return cached;
     })

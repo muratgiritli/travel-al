@@ -9,19 +9,32 @@ import sanitizeHtml from "sanitize-html";
 import {
   getSettings, putSetting, SETTINGS_KEYS, DEFAULT_SETTINGS,
   type OptionCardDef, type SiteSettings,
-  getAdminAuth, setAdminCredentials, verifyAdminLogin, verifyAdminPassword,
+  getAdminAuth, setAdminCredentials, verifyAdminLogin,
   createSessionToken, verifySessionToken, parseCookies,
 } from "../lib/siteSettings";
 import {
   createOrder,
   listOrders,
   getOrder,
+  findOrderForTracking,
   updateOrderStatus,
   updateOrderNote,
   ORDER_STATUSES,
   type OrderStatus,
   type OrderType,
 } from "../lib/ordersStore";
+import { rateLimit } from "../lib/rateLimit";
+import { logger } from "../lib/logger";
+import { createCheckoutSession, isStripeConfigured } from "../lib/stripe";
+import { captureException } from "../lib/sentry";
+import {
+  adminNotifyAddress,
+  isMailConfigured,
+  newOrderAdminEmail,
+  orderReceivedEmail,
+  sendMail,
+  statusChangeEmail,
+} from "../lib/mailer";
 
 // Prefer the Replit AI Integrations proxy (no user API key / credits needed);
 // fall back to a direct OpenAI key if the proxy env vars are missing.
@@ -30,7 +43,11 @@ const openai = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "",
     })
-  : new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() });
+  : new OpenAI({
+      apiKey:
+        (process.env.OPENAI_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim() ||
+        "missing",
+    });
 
 const router: IRouter = Router();
 
@@ -455,17 +472,10 @@ function depermitDeep<T>(v: T, key?: string): T {
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  // 1) Session cookie set by /travel/admin/login
+  // Session cookie set by /travel/admin/login. The old x-admin-password header
+  // was removed: it put the standing password on every admin request.
   const cookies = parseCookies(req.headers.cookie);
   if (verifySessionToken(cookies["tta_admin"])) { next(); return; }
-  // 2) Legacy password header (verified against stored credentials)
-  const legacy = (req.headers["x-admin-password"] as string) || "";
-  if (legacy) {
-    verifyAdminPassword(legacy)
-      .then((ok) => (ok ? next() : res.status(401).json({ error: "Unauthorized" })))
-      .catch(() => res.status(401).json({ error: "Unauthorized" }));
-    return;
-  }
   res.status(401).json({ error: "Unauthorized" });
 }
 
@@ -553,6 +563,11 @@ function publicSettings(s: SiteSettings) {
     brand: s.brand,
     esim: s.esim,
     trust: s.trust,
+    legal: s.legal,
+    integrations: s.integrations,
+    features: {
+      stripe_enabled: isStripeConfigured(),
+    },
   };
 }
 
@@ -612,6 +627,29 @@ router.get("/travel/settings", async (_req, res) => {
   }
 });
 
+/**
+ * Browser crashes land here so we can log them (and forward to Sentry when
+ * a DSN is set) without shipping a third-party script to every visitor.
+ */
+router.post(
+  "/travel/client-error",
+  rateLimit({ name: "client-error", windowMs: 10 * 60 * 1000, max: 20 }),
+  (req, res) => {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const message = String((body as { message?: unknown }).message || "").slice(0, 400);
+    if (!message) {
+      res.status(400).json({ error: "message required" });
+      return;
+    }
+    const url = String((body as { url?: unknown }).url || "").slice(0, 300);
+    const stack = String((body as { stack?: unknown }).stack || "").slice(0, 2000);
+    const kind = String((body as { kind?: unknown }).kind || "client").slice(0, 40);
+    logger.warn({ url, message, kind }, "client error");
+    void captureException(new Error(message), { kind, url, stack });
+    res.json({ ok: true });
+  },
+);
+
 /** Score admin knowledge items against the user message (simple keyword match). */
 function pickKnowledgeItems(
   items: Array<{ id: string; question: string; answer: string; tags?: string[]; sort?: number; active?: boolean }>,
@@ -645,7 +683,15 @@ function pickKnowledgeItems(
   return picked;
 }
 
-router.post("/travel/chat", async (req, res) => {
+router.post(
+  "/travel/chat",
+  rateLimit({
+    name: "chat",
+    windowMs: 60 * 1000,
+    max: 20,
+    message: "You are sending messages too quickly. Please wait a moment.",
+  }),
+  async (req, res) => {
   try {
     const { countryId, message, history, language } = req.body || {};
     const replyLang = String(language || "en").slice(0, 8);
@@ -861,13 +907,111 @@ router.post("/travel/chat", async (req, res) => {
     console.error("[visa] POST /visa/chat error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
-});
+  },
+);
 
 // ── Public order intake (applications + payment form shell) ───────────────────
 
+async function getTrackingPrefix(): Promise<string> {
+  try {
+    const settings = await getSettings();
+    const apply = settings.apply as { tracking_prefix?: string } | undefined;
+    return apply?.tracking_prefix || "TEG";
+  } catch {
+    return "TEG";
+  }
+}
+
+function publicSiteUrl(): string {
+  return process.env["PUBLIC_SITE_URL"] || "https://turkiyetraveloffice.com";
+}
+
+async function siteName(): Promise<string> {
+  try {
+    const settings = await getSettings();
+    return (settings.brand as { site_name?: string } | undefined)?.site_name
+      || "Türkiye Travel Office";
+  } catch {
+    return "Türkiye Travel Office";
+  }
+}
+
+/** Best-effort receipt; a mail failure must never fail the application. */
+async function sendOrderReceivedEmail(order: {
+  email: string;
+  tracking_code: string;
+  type: string;
+  country?: string;
+  customer_name?: string;
+  summary?: string;
+  amount: number;
+  currency: string;
+}): Promise<boolean> {
+  if (!isMailConfigured()) return false;
+  try {
+    const name = await siteName();
+    const mail = orderReceivedEmail({
+      trackingCode: order.tracking_code,
+      summary: order.summary,
+      amount: order.amount,
+      currency: order.currency,
+      siteName: name,
+      siteUrl: publicSiteUrl(),
+    });
+    const sent = await sendMail({ to: order.email, ...mail });
+
+    const notify = adminNotifyAddress();
+    if (notify) {
+      const adminMail = newOrderAdminEmail({
+        trackingCode: order.tracking_code,
+        type: order.type,
+        summary: order.summary,
+        amount: order.amount,
+        currency: order.currency,
+        email: order.email,
+        customerName: order.customer_name,
+        country: order.country,
+        siteUrl: publicSiteUrl(),
+      });
+      void sendMail({ to: notify, ...adminMail });
+    }
+    return sent;
+  } catch (err) {
+    console.error("[visa] order email failed:", err);
+    return false;
+  }
+}
+
+/** Tells the applicant their status moved; silent for statuses without copy. */
+async function sendStatusChangeEmail(
+  order: { email: string; tracking_code: string; status: string },
+  note?: string,
+): Promise<void> {
+  if (!isMailConfigured()) return;
+  try {
+    const mail = statusChangeEmail({
+      trackingCode: order.tracking_code,
+      status: order.status,
+      note,
+      siteName: await siteName(),
+      siteUrl: publicSiteUrl(),
+    });
+    if (mail) await sendMail({ to: order.email, ...mail });
+  } catch (err) {
+    console.error("[visa] status email failed:", err);
+  }
+}
+
 const ORDER_TYPES: OrderType[] = ["entry", "sticker", "insurance", "esim"];
 
-router.post("/travel/orders", async (req, res) => {
+const createOrderLimiter = rateLimit({
+  name: "orders",
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  message: "Too many applications from this address. Please try again later.",
+});
+
+router.post("/travel/orders", createOrderLimiter, async (req, res) => {
   try {
     const body = req.body || {};
     const type = String(body.type || "") as OrderType;
@@ -905,14 +1049,117 @@ router.post("/travel/orders", async (req, res) => {
       summary: body.summary ? String(body.summary).slice(0, 400) : undefined,
       payload: body.payload && typeof body.payload === "object" ? body.payload : {},
       payment,
-      mark_paid: Boolean(body.mark_paid || payment),
+      tracking_prefix: await getTrackingPrefix(),
     });
-    res.status(201).json({ ok: true, order: { id: order.id, status: order.status, amount: order.amount } });
+
+    const emailed = await sendOrderReceivedEmail(order);
+
+    res.status(201).json({
+      ok: true,
+      order: {
+        id: order.id,
+        tracking_code: order.tracking_code,
+        status: order.status,
+        amount: order.amount,
+      },
+      email_sent: emailed,
+    });
   } catch (err) {
     console.error("[visa] POST /travel/orders error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * Starts a hosted Stripe Checkout for an existing order.
+ * 404s while Stripe is unconfigured so the UI simply never offers the option.
+ */
+router.post(
+  "/travel/orders/:code/checkout",
+  rateLimit({ name: "checkout", windowMs: 10 * 60 * 1000, max: 20 }),
+  async (req, res) => {
+    try {
+      if (!isStripeConfigured()) {
+        res.status(404).json({ error: "Online payment is not enabled" });
+        return;
+      }
+      const email = String((req.body || {}).email || "");
+      const order = await findOrderForTracking(String(req.params.code), email);
+      if (!order) {
+        res.status(404).json({ error: "No application matches that reference and email" });
+        return;
+      }
+      if (order.status !== "new" && order.status !== "approved") {
+        res.status(409).json({ error: "This application is not awaiting payment" });
+        return;
+      }
+
+      const url = await createCheckoutSession({
+        trackingCode: order.tracking_code,
+        description: order.summary || `Application ${order.tracking_code}`,
+        amount: order.amount,
+        currency: order.currency,
+        customerEmail: order.email,
+        siteUrl: publicSiteUrl(),
+      });
+      if (!url) {
+        res.status(502).json({ error: "Could not start payment. Please try again." });
+        return;
+      }
+      res.json({ url });
+    } catch (err) {
+      console.error("[visa] checkout error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+/** Public status lookup — needs both the reference and the applicant's email. */
+router.get(
+  "/travel/orders/track",
+  rateLimit({
+    name: "track",
+    windowMs: 10 * 60 * 1000,
+    max: 30,
+    message: "Too many lookups. Please try again shortly.",
+  }),
+  async (req, res) => {
+    try {
+      const code = String(req.query.code || "");
+      const email = String(req.query.email || "");
+      if (!code.trim() || !email.trim()) {
+        res.status(400).json({ error: "Reference and email are both required" });
+        return;
+      }
+
+      const order = await findOrderForTracking(code, email);
+      if (!order) {
+        // Same response whether the code is wrong or the email does not match,
+        // so this cannot be used to discover which references exist.
+        res.status(404).json({ error: "No application matches that reference and email" });
+        return;
+      }
+
+      res.json({
+        order: {
+          tracking_code: order.tracking_code,
+          status: order.status,
+          type: order.type,
+          country: order.country,
+          summary: order.summary,
+          amount: order.amount,
+          currency: order.currency,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          history: (order.status_history || []).map((h) => ({ status: h.status, at: h.at })),
+        },
+      });
+    } catch (err) {
+      console.error("[visa] GET /travel/orders/track error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 router.get("/travel/admin/orders", requireAdmin, async (_req, res) => {
   try {
@@ -924,6 +1171,48 @@ router.get("/travel/admin/orders", requireAdmin, async (_req, res) => {
     });
   } catch (err) {
     console.error("[visa] GET admin/orders error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/travel/admin/orders.csv", requireAdmin, async (_req, res) => {
+  try {
+    const orders = await listOrders();
+    const columns: [string, (o: (typeof orders)[number]) => string][] = [
+      ["reference", (o) => o.tracking_code],
+      ["created_at", (o) => o.created_at],
+      ["updated_at", (o) => o.updated_at],
+      ["status", (o) => o.status],
+      ["type", (o) => o.type],
+      ["amount", (o) => String(o.amount)],
+      ["currency", (o) => o.currency],
+      ["customer_name", (o) => o.customer_name || ""],
+      ["email", (o) => o.email],
+      ["phone", (o) => o.phone || ""],
+      ["country", (o) => o.country || ""],
+      ["option", (o) => o.option_title || ""],
+      ["summary", (o) => o.summary || ""],
+      ["admin_note", (o) => o.admin_note || ""],
+    ];
+
+    // A leading =, +, - or @ makes spreadsheets treat the value as a formula.
+    const cell = (value: string) => {
+      const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+
+    const lines = [
+      columns.map(([name]) => cell(name)).join(","),
+      ...orders.map((o) => columns.map(([, get]) => cell(get(o))).join(",")),
+    ];
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="orders-${stamp}.csv"`);
+    // BOM so Excel opens UTF-8 names correctly.
+    res.send(`\uFEFF${lines.join("\r\n")}\r\n`);
+  } catch (err) {
+    console.error("[visa] GET admin/orders.csv error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -960,12 +1249,14 @@ router.patch("/travel/admin/orders/:id", requireAdmin, async (req, res) => {
         res.status(400).json({ error: "Invalid status" });
         return;
       }
+      const note = body.note ? String(body.note).slice(0, 400) : undefined;
       order = await updateOrderStatus(
         id,
         status,
-        body.note ? String(body.note).slice(0, 400) : undefined,
+        note,
         body.admin_note !== undefined ? String(body.admin_note) : undefined,
       );
+      if (order) void sendStatusChangeEmail(order, note);
     }
     res.json({ ok: true, order });
   } catch (err) {
@@ -978,7 +1269,19 @@ router.patch("/travel/admin/orders/:id", requireAdmin, async (req, res) => {
 
 const ADMIN_COOKIE = "tta_admin";
 
-router.post("/travel/admin/login", async (req, res) => {
+const IS_PRODUCTION = process.env["NODE_ENV"] === "production";
+/** Omitted off HTTPS so local development over http still keeps a session. */
+const COOKIE_SECURE = IS_PRODUCTION ? " Secure;" : "";
+
+router.post(
+  "/travel/admin/login",
+  rateLimit({
+    name: "admin-login",
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: "Too many sign-in attempts. Please wait before trying again.",
+  }),
+  async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!(await verifyAdminLogin(String(username || ""), String(password || "")))) {
@@ -987,16 +1290,20 @@ router.post("/travel/admin/login", async (req, res) => {
     }
     const token = createSessionToken();
     res.setHeader("Set-Cookie",
-      `${ADMIN_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+      `${ADMIN_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly;${COOKIE_SECURE} SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
     res.json({ ok: true });
   } catch (err) {
     console.error("[visa] POST /travel/admin/login error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
-});
+  },
+);
 
 router.post("/travel/admin/logout", (_req, res) => {
-  res.setHeader("Set-Cookie", `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.setHeader(
+    "Set-Cookie",
+    `${ADMIN_COOKIE}=; Path=/; HttpOnly;${COOKIE_SECURE} SameSite=Lax; Max-Age=0`,
+  );
   res.json({ ok: true });
 });
 
@@ -1221,5 +1528,82 @@ router.delete("/travel/admin/countries/:id/override", requireAdmin, async (req, 
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+function countrySlug(c: { name: string; slug?: string }): string {
+  return (
+    String(c.slug || "").toLowerCase() ||
+    c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  );
+}
+
+/** Country deep-link slugs for the sitemap; /{slug} resolves into the chat. */
+export async function listCountrySlugs(): Promise<string[]> {
+  const all = await loadAll();
+  return all
+    .filter((c) => (c as { is_active?: boolean }).is_active !== false)
+    .map((c) => countrySlug(c))
+    .filter(Boolean);
+}
+
+export interface CountrySeo {
+  slug: string;
+  name: string;
+  title: string;
+  description: string;
+  /** Crawlable summary rendered into the served HTML. */
+  paragraphs: string[];
+  insuranceRequired: boolean;
+}
+
+/**
+ * Per-country metadata and copy for the server-rendered page head and body.
+ *
+ * Without this every /{slug} URL returned identical HTML, so search engines
+ * folded all of them into the homepage and none could rank on their own.
+ */
+export async function getCountrySeo(slug: string): Promise<CountrySeo | null> {
+  const wanted = String(slug || "").toLowerCase();
+  if (!wanted) return null;
+  const all = await loadAll();
+  const country = all.find(
+    (c) => countrySlug(c) === wanted || c.id === wanted || c.iso2.toLowerCase() === wanted,
+  );
+  if (!country || (country as { is_active?: boolean }).is_active === false) return null;
+
+  const card = depermitDeep(buildCard(country)) as ReturnType<typeof buildCard>;
+  if (!card) return null;
+
+  const name = country.name;
+  const stay = card.top_block.max_stay_text || "";
+  const validity = card.top_block.passport_validity_text || "";
+  const insuranceRequired = Boolean(card.insurance_required);
+
+  const paragraphs = [
+    card.visa_status || card.headline || "",
+    stay ? `Maximum stay for ${name} passport holders: ${stay}.` : "",
+    validity ? `Passport validity required: ${validity}.` : "",
+    insuranceRequired
+      ? "Travel health insurance is required for the full duration of the stay."
+      : "",
+    ...(card.body || []),
+  ]
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+
+  const description =
+    `Türkiye entry requirements for ${name} passport holders` +
+    (stay ? ` — stay up to ${stay}` : "") +
+    (insuranceRequired ? ", travel insurance required" : "") +
+    ". Check the rules and apply online.";
+
+  return {
+    slug: countrySlug(country),
+    name,
+    title: `Türkiye entry requirements for ${name} passport holders`,
+    description: description.slice(0, 300),
+    paragraphs: paragraphs.slice(0, 6),
+    insuranceRequired,
+  };
+}
 
 export default router;

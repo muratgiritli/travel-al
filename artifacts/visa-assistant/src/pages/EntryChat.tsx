@@ -9,6 +9,10 @@ import InsuranceInfo from '@/components/InsuranceInfo';
 import InsuranceExemptLanding from '@/components/InsuranceExemptLanding';
 import TrustFaq from '@/components/TrustFaq';
 import SiteFooter from '@/components/SiteFooter';
+import { WelcomeHeroImage } from '@/components/WelcomeHeroImage';
+import ShareButton from '@/components/ShareButton';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
+import { useBackDismiss } from '@/lib/useBackDismiss';
 import type { ContentSettings, OptionCard } from '@/lib/settings';
 import {
   readSessionHistory,
@@ -64,6 +68,15 @@ function TurkeyFlagLogo({ size = 36 }: { size?: number }) {
 interface Country {
   id: string; name: string; name_tr?: string; iso2: string; flag_emoji: string;
   category: WireCategory;
+}
+
+/** Shareable deep link; /{slug} redirects into chat state for that country. */
+function countryShareUrl(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return `${window.location.origin}/${slug}`;
 }
 
 interface TopBlockData {
@@ -329,6 +342,13 @@ export default function EntryChat() {
   const [esimFormOpen, setEsimFormOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
+  useKeyboardInset();
+
+  // Android back / browser back closes an open form rather than the site.
+  useBackDismiss(insuranceFormOpen, () => setInsuranceFormOpen(false));
+  useBackDismiss(esimFormOpen, () => setEsimFormOpen(false));
+  useBackDismiss(entryApply !== null, () => setEntryApply(null));
+
   const composerCountrySuggestions = (() => {
     if (unlocked || selectedId) return [] as Country[];
     const q = inputValue.trim().toLowerCase();
@@ -482,44 +502,67 @@ export default function EntryChat() {
     onCard: (card: EntryCardData) => void,
     onToken: (token: string) => void,
   ): Promise<void> => {
-    const res = await fetch('/api/travel/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-      body: JSON.stringify({ countryId, message, history, language: lang }),
-    });
+    // Mobile networks drop mid-stream; never leave the reply silently empty.
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 45000);
+    let received = false;
 
-    if (!res.ok || !res.body) {
-      onToken(t('chat.aiError'));
-      return;
-    }
+    const emit = (token: string) => {
+      received = true;
+      onToken(token);
+    };
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+    try {
+      const res = await fetch('/api/travel/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        body: JSON.stringify({ countryId, message, history, language: lang }),
+        signal: controller.signal,
+      });
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6);
-        if (payload === '[DONE]') return;
-        if (payload.startsWith('[ERROR]')) {
-          onToken(payload.slice(7).trim() || 'An error occurred.');
-          return;
-        }
-        if (payload.startsWith('[CARD]')) {
-          try { onCard(JSON.parse(payload.slice(6))); } catch { /* ignore */ }
-          continue;
-        }
-        // Unescape newlines encoded by the server
-        onToken(payload.replace(/\\n/g, '\n'));
+      if (!res.ok || !res.body) {
+        onToken(t('chat.aiError'));
+        return;
       }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6);
+          if (payload === '[DONE]') return;
+          if (payload.startsWith('[ERROR]')) {
+            emit(payload.slice(7).trim() || 'An error occurred.');
+            return;
+          }
+          if (payload.startsWith('[CARD]')) {
+            try { onCard(JSON.parse(payload.slice(6))); } catch { /* ignore */ }
+            continue;
+          }
+          // Unescape newlines encoded by the server
+          emit(payload.replace(/\\n/g, '\n'));
+        }
+      }
+    } catch {
+      onToken(
+        received
+          ? `\n\n${t('common.retry')}`
+          : navigator.onLine
+            ? t('chat.aiError')
+            : t('common.offline'),
+      );
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 
@@ -714,7 +757,7 @@ export default function EntryChat() {
                 className="flex items-center gap-2 px-3 py-2"
                 style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}
               >
-                <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide shrink-0">
+                <div className="hidden sm:block text-[11px] font-semibold text-gray-400 uppercase tracking-wide shrink-0">
                   {copy.passportCountry}
                 </div>
                 <button
@@ -730,6 +773,13 @@ export default function EntryChat() {
                     {copy.changeCountry}
                   </span>
                 </button>
+                <ShareButton
+                  title={`${selectedCountry.name} — ${site.welcome_title || 'Türkiye'}`}
+                  text={site.welcome_message}
+                  url={countryShareUrl(selectedCountry.name)}
+                  label={t('common.share')}
+                  copiedLabel={t('common.linkCopied')}
+                />
               </div>
             </motion.div>
           )}
@@ -751,16 +801,7 @@ export default function EntryChat() {
                 exit={{ opacity: 0, y: -14, scale: 0.98 }}
                 transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: `url(${settings.brand.welcome_bg_url || '/istanbul-welcome-bg.jpg'})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center 35%',
-                    filter: 'saturate(1.15) contrast(1.06)',
-                  }}
-                  aria-hidden
-                />
+                <WelcomeHeroImage src={settings.brand.welcome_bg_url} />
                 {/* Soft top/bottom scrims only — image stays open in the middle */}
                 <div
                   className="absolute inset-0"
@@ -1148,7 +1189,8 @@ export default function EntryChat() {
           style={{
             borderTop: '1px solid #e5e7eb',
             background: '#fff',
-            paddingBottom: 'max(28px, calc(16px + env(safe-area-inset-bottom)))',
+            paddingBottom:
+              'calc(max(28px, 16px + env(safe-area-inset-bottom)) + var(--keyboard-inset, 0px))',
           }}
         >
           {!unlocked && composerMenuOpen && inputValue.trim() && (
@@ -1234,7 +1276,12 @@ export default function EntryChat() {
                 disabled={loading && !unlocked}
                 placeholder={unlocked ? site.ask_placeholder : site.type_country_placeholder}
                 aria-label={unlocked ? site.ask_placeholder : site.type_country_placeholder}
-                className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-gray-800 placeholder:text-gray-400 placeholder:text-[13px]"
+                enterKeyHint={unlocked ? 'send' : 'go'}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="words"
+                spellCheck={false}
+                className="flex-1 min-w-0 bg-transparent outline-none text-base sm:text-[14px] text-gray-800 placeholder:text-gray-400 placeholder:text-[13px]"
               />
             </div>
             <button
@@ -1254,7 +1301,7 @@ export default function EntryChat() {
                 loading ||
                 (unlocked ? !inputValue.trim() : composerCountrySuggestions.length === 0)
               }
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm shrink-0 disabled:opacity-40"
+              className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm shrink-0 disabled:opacity-40"
               style={{ background: BTN }}
               aria-label={unlocked ? 'Send' : copy.continue}
             >

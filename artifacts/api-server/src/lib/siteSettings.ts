@@ -163,7 +163,7 @@ export const DEFAULT_SETTINGS = {
     insurance_required_message: "Travel health insurance is mandatory for the full duration of your stay.",
     bottom_disclaimer: "",
     faq_text: "Frequently asked questions about travelling to Türkiye.",
-    track_text: "Track your application status here.",
+    track_text: "Enter your reference number and the email you applied with to see the current status.",
     contact_text: "Contact our travel experts — we reply within 24 hours.",
   },
   content: CONTENT_SEED,
@@ -176,9 +176,12 @@ export const DEFAULT_SETTINGS = {
       { name: "passport_number", label: "Passport number", type: "text", required: true },
       { name: "arrival_date", label: "Planned arrival date", type: "date", required: false },
     ],
-    success_message: "Application received! Check your email for the next steps.",
+    success_message: "Application received. Our team reviews applications in order of arrival.",
     success_title: "Application received",
-    success_email_note: "A confirmation was sent to {email}. Keep your tracking number for status updates.",
+    // Says nothing about a message already being sent: email delivery depends
+    // on RESEND_API_KEY being configured.
+    success_email_note:
+      "Keep this reference — you need it together with {email} to check your status on the Track page.",
     tracking_prefix: "TEG",
     force_insurance: true,
   },
@@ -264,6 +267,38 @@ export const DEFAULT_SETTINGS = {
     cta_href: '/next',
     plans: DEFAULT_ESIM_PLANS,
   },
+  /**
+   * Seller identity and legal copy.
+   *
+   * Turkish distance-selling rules require the seller's legal name, address,
+   * tax details and a cancellation/refund policy to be published. These start
+   * empty on purpose: the footer and legal pages show a "not yet published"
+   * notice rather than invented company details.
+   */
+  legal: {
+    company_name: "",
+    legal_name: "",
+    address: "",
+    tax_office: "",
+    tax_number: "",
+    mersis_no: "",
+    trade_registry_no: "",
+    email: "",
+    phone: "",
+    /** Markdown-free plain text; blank falls back to a generic notice. */
+    refund_policy: "",
+    distance_sales_agreement: "",
+    kvkk_notice: "",
+    cookie_notice:
+      "We use only the cookies needed to run this site and remember your language. No advertising cookies are set.",
+  },
+  integrations: {
+    /** Plausible domain, e.g. turkiyetraveloffice.com. Empty disables analytics. */
+    plausible_domain: "",
+    /** Digits only, e.g. 905551112233. Empty hides the support button. */
+    whatsapp_number: "",
+    whatsapp_message: "Hello, I have a question about travelling to Türkiye.",
+  },
   /** Server-only AI grounding bank — not exposed on public /settings. */
   knowledge: KNOWLEDGE_SEED,
 };
@@ -312,9 +347,23 @@ export async function putSetting(key: string, value: unknown): Promise<void> {
  * ──────────────────────────────────────────────────────────────────────────── */
 
 const AUTH_KEY = "admin_auth";
-const SESSION_SECRET = process.env.SESSION_SECRET || "dev-secret";
 const DEFAULT_USERNAME = "admin";
-const DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+
+// Development keeps working without configuration; production must not fall
+// back to a value that is published in this repository.
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+function requiredSecret(name: "SESSION_SECRET" | "ADMIN_PASSWORD", devFallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (IS_PRODUCTION) {
+    throw new Error(`${name} must be set in production. Refusing to start with a default.`);
+  }
+  return devFallback;
+}
+
+const SESSION_SECRET = requiredSecret("SESSION_SECRET", "dev-secret");
+const DEFAULT_PASSWORD = requiredSecret("ADMIN_PASSWORD", "admin123");
 
 function hashPassword(password: string, salt?: string): { salt: string; hash: string } {
   const s = salt || randomBytes(16).toString("hex");
@@ -343,15 +392,6 @@ export async function setAdminCredentials(username: string, password: string): P
 export async function verifyAdminLogin(username: string, password: string): Promise<boolean> {
   const auth = await getAdminAuth();
   if (username !== auth.username) return false;
-  const { hash } = hashPassword(password, auth.salt);
-  const a = Buffer.from(hash, "hex");
-  const b = Buffer.from(auth.hash, "hex");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-/** Legacy header support: verify a raw password against stored credentials. */
-export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const auth = await getAdminAuth();
   const { hash } = hashPassword(password, auth.salt);
   const a = Buffer.from(hash, "hex");
   const b = Buffer.from(auth.hash, "hex");

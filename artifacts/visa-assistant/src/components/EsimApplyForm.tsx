@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { EsimPlan } from '@/lib/settings';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -60,7 +60,7 @@ function Field({
         autoComplete={autoComplete}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+        className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
         style={{ border: '1px solid #E5E7EB', background: '#F9FAFB' }}
       />
     </label>
@@ -123,12 +123,13 @@ export default function EsimApplyForm({
 
   if (submitted) {
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={plan.price}
         currency={cur}
-        summary={`eSIM · ${plan.name} · ${email}`}
+        email={email}
+        summary={`eSIM · ${plan.name}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'esim',
             amount: plan.price,
@@ -148,10 +149,8 @@ export default function EsimApplyForm({
               firstName,
               lastName,
             },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );
@@ -239,7 +238,7 @@ export default function EsimApplyForm({
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+              className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
               style={{ border: '1px solid #E5E7EB', background: '#fff' }}
             >
               <option value="">{t('common.selectCountry')}</option>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { OptionCard } from '@/lib/settings';
-import PaymentForm from '@/components/PaymentForm';
+import OrderConfirm from '@/components/OrderConfirm';
 import { submitOrder } from '@/lib/orders';
 import { useI18n } from '@/lib/i18n';
 
@@ -144,7 +144,7 @@ function Field({
         autoComplete={autoComplete}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+        className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
         style={{ border: '1px solid #E5E7EB', background: '#F9FAFB' }}
       />
     </label>
@@ -229,7 +229,7 @@ function ApplicantFields({
           <select
             value={value.supportingDocFrom}
             onChange={(e) => onChange({ supportingDocFrom: e.target.value })}
-            className="w-full rounded-xl px-3 py-2.5 text-[14px] text-gray-900 outline-none"
+            className="w-full rounded-xl px-3 py-2.5 text-base sm:text-[14px] text-gray-900 outline-none"
             style={{ border: '1px solid #E5E7EB', background: '#fff' }}
           >
             <option value="">{t('common.selectCountry')}</option>
@@ -387,12 +387,13 @@ export default function EntryApplyForm({
   if (submitted) {
     const primary = applicants[0];
     return (
-      <PaymentForm
+      <OrderConfirm
         amount={grandTotal}
         currency={currency}
-        summary={`Entry + insurance · ${personCount} applicant${personCount === 1 ? '' : 's'} · ${email}`}
+        email={email}
+        summary={`Entry + insurance · ${personCount} applicant${personCount === 1 ? '' : 's'}`}
         onBack={() => setSubmitted(false)}
-        onPay={async (meta) => {
+        onSubmit={async () => {
           const order = await submitOrder({
             type: 'entry',
             amount: grandTotal,
@@ -414,10 +415,8 @@ export default function EntryApplyForm({
               address,
               applicants,
             },
-            payment: meta,
-            mark_paid: true,
           });
-          return order.id;
+          return order.tracking_code;
         }}
       />
     );

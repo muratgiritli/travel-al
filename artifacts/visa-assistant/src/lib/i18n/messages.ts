@@ -28,6 +28,26 @@ const ROWS: Record<string, Row> = {
   'common.back': {
     en: 'Back', tr: 'Geri', ar: 'رجوع', es: 'Atrás', de: 'Zurück', fr: 'Retour', ru: 'Назад',
   },
+  'common.share': {
+    en: 'Share', tr: 'Paylaş', ar: 'مشاركة', es: 'Compartir', de: 'Teilen', fr: 'Partager', ru: 'Поделиться',
+  },
+  'common.linkCopied': {
+    en: 'Link copied', tr: 'Bağlantı kopyalandı', ar: 'تم نسخ الرابط', es: 'Enlace copiado',
+    de: 'Link kopiert', fr: 'Lien copié', ru: 'Ссылка скопирована',
+  },
+  'common.retry': {
+    en: 'Retry', tr: 'Tekrar dene', ar: 'أعد المحاولة', es: 'Reintentar', de: 'Erneut versuchen',
+    fr: 'Réessayer', ru: 'Повторить',
+  },
+  'common.offline': {
+    en: 'No connection. Check your network and try again.',
+    tr: 'Bağlantı yok. Ağınızı kontrol edip tekrar deneyin.',
+    ar: 'لا يوجد اتصال. تحقق من الشبكة وحاول مرة أخرى.',
+    es: 'Sin conexión. Revisa tu red e inténtalo de nuevo.',
+    de: 'Keine Verbindung. Prüfe dein Netzwerk und versuche es erneut.',
+    fr: 'Pas de connexion. Vérifiez votre réseau et réessayez.',
+    ru: 'Нет соединения. Проверьте сеть и повторите попытку.',
+  },
   'common.yes': {
     en: 'Yes', tr: 'Evet', ar: 'نعم', es: 'Sí', de: 'Ja', fr: 'Oui', ru: 'Да',
   },
@@ -367,62 +387,212 @@ const ROWS: Record<string, Row> = {
   },
 
   // ── Payment ──
-  'pay.title': {
-    en: 'Payment', tr: 'Ödeme', ar: 'الدفع', es: 'Pago', de: 'Zahlung', fr: 'Paiement', ru: 'Оплата',
+  'confirm.title': {
+    en: 'Review your application', tr: 'Başvurunuzu gözden geçirin', ar: 'راجع طلبك',
+    es: 'Revise su solicitud', de: 'Antrag prüfen', fr: 'Vérifiez votre demande', ru: 'Проверьте заявку',
   },
-  'pay.hint': {
-    en: 'Enter card details to continue.', tr: 'Devam etmek için kart bilgilerini girin.', ar: 'أدخل بيانات البطاقة للمتابعة.', es: 'Introduzca los datos de la tarjeta.', de: 'Kartendaten eingeben, um fortzufahren.', fr: 'Saisissez les données de carte.', ru: 'Введите данные карты.',
+  'confirm.hint': {
+    en: 'Check the details below before submitting.',
+    tr: 'Göndermeden önce aşağıdaki bilgileri kontrol edin.',
+    ar: 'تحقق من التفاصيل أدناه قبل الإرسال.',
+    es: 'Compruebe los datos antes de enviar.',
+    de: 'Prüfen Sie die Angaben vor dem Absenden.',
+    fr: 'Vérifiez les informations avant d’envoyer.',
+    ru: 'Проверьте данные перед отправкой.',
   },
-  'pay.amountDue': {
-    en: 'Amount due', tr: 'Ödenecek tutar', ar: 'المبلغ المستحق', es: 'Importe a pagar', de: 'Fälliger Betrag', fr: 'Montant dû', ru: 'К оплате',
+  'confirm.total': {
+    en: 'Total', tr: 'Toplam', ar: 'الإجمالي', es: 'Total', de: 'Gesamt', fr: 'Total', ru: 'Итого',
   },
-  'pay.cardholder': {
-    en: 'Cardholder name', tr: 'Kart sahibi', ar: 'اسم حامل البطاقة', es: 'Titular de la tarjeta', de: 'Karteninhaber', fr: 'Titulaire de la carte', ru: 'Имя на карте',
+  'confirm.sendTo': {
+    en: 'Confirmation goes to {email}',
+    tr: 'Onay {email} adresine gönderilir',
+    ar: 'سيُرسل التأكيد إلى {email}',
+    es: 'La confirmación se enviará a {email}',
+    de: 'Bestätigung geht an {email}',
+    fr: 'La confirmation sera envoyée à {email}',
+    ru: 'Подтверждение придёт на {email}',
   },
-  'pay.cardNumber': {
-    en: 'Card number', tr: 'Kart numarası', ar: 'رقم البطاقة', es: 'Número de tarjeta', de: 'Kartennummer', fr: 'Numéro de carte', ru: 'Номер карты',
+  'confirm.paymentNote': {
+    en: 'No payment is taken now. Once our team reviews your application we email you a secure payment link.',
+    tr: 'Şu anda ödeme alınmaz. Ekibimiz başvurunuzu inceledikten sonra size güvenli bir ödeme bağlantısı e-postayla gönderilir.',
+    ar: 'لا يتم الدفع الآن. بعد مراجعة فريقنا لطلبك سنرسل لك رابط دفع آمن بالبريد الإلكتروني.',
+    es: 'No se cobra nada ahora. Tras revisar su solicitud le enviaremos por correo un enlace de pago seguro.',
+    de: 'Es wird jetzt nichts abgebucht. Nach der Prüfung senden wir Ihnen per E-Mail einen sicheren Zahlungslink.',
+    fr: 'Aucun paiement maintenant. Après examen, nous vous enverrons par e-mail un lien de paiement sécurisé.',
+    ru: 'Сейчас оплата не взимается. После проверки мы пришлём на почту защищённую ссылку для оплаты.',
   },
-  'pay.expiry': {
-    en: 'Expiry', tr: 'Son kullanma', ar: 'الانتهاء', es: 'Caducidad', de: 'Ablauf', fr: 'Expiration', ru: 'Срок',
+  'confirm.submit': {
+    en: 'Submit application', tr: 'Başvuruyu gönder', ar: 'إرسال الطلب',
+    es: 'Enviar solicitud', de: 'Antrag senden', fr: 'Envoyer la demande', ru: 'Отправить заявку',
   },
-  'pay.cvc': {
-    en: 'CVC', tr: 'CVC', ar: 'CVC', es: 'CVC', de: 'CVC', fr: 'CVC', ru: 'CVC',
+  'confirm.submitting': {
+    en: 'Submitting…', tr: 'Gönderiliyor…', ar: 'جارٍ الإرسال…',
+    es: 'Enviando…', de: 'Wird gesendet…', fr: 'Envoi…', ru: 'Отправка…',
   },
-  'pay.payBtn': {
-    en: 'Pay {currency} {amount}', tr: 'Öde {currency} {amount}', ar: 'ادفع {currency} {amount}', es: 'Pagar {currency} {amount}', de: '{currency} {amount} zahlen', fr: 'Payer {currency} {amount}', ru: 'Оплатить {currency} {amount}',
+  'confirm.received': {
+    en: 'Application received', tr: 'Başvuru alındı', ar: 'تم استلام الطلب',
+    es: 'Solicitud recibida', de: 'Antrag eingegangen', fr: 'Demande reçue', ru: 'Заявка получена',
   },
-  'pay.previewNote': {
-    en: 'Form preview only — no card is charged until a payment provider is connected.',
-    tr: 'Yalnızca form önizlemesi — ödeme sağlayıcısı bağlanana kadar karttan çekim yapılmaz.',
-    ar: 'معاينة النموذج فقط — لن تُخصم البطاقة حتى ربط مزود الدفع.',
-    es: 'Solo vista previa — no se cobra hasta conectar el proveedor de pago.',
-    de: 'Nur Formularvorschau — keine Belastung bis ein Zahlungsanbieter verbunden ist.',
-    fr: 'Aperçu uniquement — aucun débit tant que le prestataire n’est pas connecté.',
-    ru: 'Только форма — списание после подключения платёжного провайдера.',
+  'confirm.receivedBody': {
+    en: 'Keep the reference below — you need it together with your email address to check your status.',
+    tr: 'Aşağıdaki referansı saklayın — durumunuzu sorgulamak için e-posta adresinizle birlikte gerekir.',
+    ar: 'احتفظ بالرقم المرجعي أدناه — ستحتاجه مع بريدك الإلكتروني لمتابعة الحالة.',
+    es: 'Guarde la referencia — la necesitará junto con su correo para consultar el estado.',
+    de: 'Bewahren Sie die Referenz auf — Sie brauchen sie zusammen mit Ihrer E-Mail für den Status.',
+    fr: 'Conservez la référence — elle vous servira avec votre e-mail pour suivre le dossier.',
+    ru: 'Сохраните номер — он нужен вместе с вашей почтой для проверки статуса.',
   },
-  'pay.received': {
-    en: 'Application received', tr: 'Başvuru alındı', ar: 'تم استلام الطلب', es: 'Solicitud recibida', de: 'Antrag eingegangen', fr: 'Demande reçue', ru: 'Заявка получена',
+  'confirm.reference': {
+    en: 'Reference', tr: 'Referans', ar: 'المرجع',
+    es: 'Referencia', de: 'Referenz', fr: 'Référence', ru: 'Номер',
   },
-  'pay.receivedBody': {
-    en: 'Your order was saved for our team. Live card charging will be connected when the payment provider API is added.',
-    tr: 'Siparişiniz ekibimiz için kaydedildi. Canlı kart çekimi ödeme API’si eklenince bağlanacak.',
-    ar: 'تم حفظ طلبك لفريقنا. سيتم ربط الخصم المباشر عند إضافة واجهة مزود الدفع.',
-    es: 'Su pedido se guardó para el equipo. El cobro real se conectará al añadir la API de pago.',
-    de: 'Ihre Bestellung wurde gespeichert. Die echte Kartenzahlung folgt mit der Zahlungs-API.',
-    fr: 'Votre commande est enregistrée. Le débit réel sera branché avec l’API de paiement.',
-    ru: 'Заказ сохранён для команды. Реальное списание — после подключения API оплаты.',
+  'confirm.nextSteps': {
+    en: 'Our team reviews applications in order of arrival. You can check progress any time on the Track page.',
+    tr: 'Ekibimiz başvuruları geliş sırasına göre inceler. Durumu istediğiniz zaman Takip sayfasından görebilirsiniz.',
+    ar: 'يراجع فريقنا الطلبات حسب ترتيب الوصول. يمكنك متابعة الحالة في صفحة التتبع.',
+    es: 'Revisamos las solicitudes por orden de llegada. Puede consultar el estado en la página de seguimiento.',
+    de: 'Wir prüfen Anträge in der Reihenfolge des Eingangs. Den Status sehen Sie jederzeit auf der Tracking-Seite.',
+    fr: 'Les demandes sont traitées par ordre d’arrivée. Suivez l’avancement sur la page de suivi.',
+    ru: 'Заявки рассматриваются в порядке поступления. Статус доступен на странице отслеживания.',
   },
-  'pay.err.cardholder': {
-    en: 'Enter the cardholder name.', tr: 'Kart sahibi adını girin.', ar: 'أدخل اسم حامل البطاقة.', es: 'Introduzca el titular.', de: 'Karteninhaber eingeben.', fr: 'Entrez le titulaire.', ru: 'Введите имя на карте.',
+  'cookie.label': {
+    en: 'Cookie notice', tr: 'Çerez bildirimi', ar: 'إشعار ملفات الارتباط',
+    es: 'Aviso de cookies', de: 'Cookie-Hinweis', fr: 'Avis sur les cookies',
+    ru: 'Уведомление о cookie',
   },
-  'pay.err.card': {
-    en: 'Enter a valid card number.', tr: 'Geçerli kart numarası girin.', ar: 'أدخل رقم بطاقة صالحاً.', es: 'Introduzca un número válido.', de: 'Gültige Kartennummer eingeben.', fr: 'Entrez un numéro valide.', ru: 'Введите корректный номер карты.',
+  'cookie.text': {
+    en: 'We use only the cookies needed to run this site and remember your language. No advertising cookies are set.',
+    tr: 'Yalnızca sitenin çalışması ve dil tercihiniz için gereken çerezleri kullanıyoruz. Reklam çerezi kullanılmaz.',
+    ar: 'نستخدم فقط ملفات الارتباط اللازمة لتشغيل الموقع وتذكّر لغتك. لا نستخدم ملفات ارتباط إعلانية.',
+    es: 'Solo usamos las cookies necesarias para el sitio y recordar su idioma. No usamos cookies publicitarias.',
+    de: 'Wir verwenden nur die für den Betrieb und Ihre Sprachwahl nötigen Cookies. Keine Werbe-Cookies.',
+    fr: 'Nous n’utilisons que les cookies nécessaires au site et à votre langue. Aucun cookie publicitaire.',
+    ru: 'Мы используем только необходимые cookie и сохраняем выбор языка. Рекламных cookie нет.',
   },
-  'pay.err.expiry': {
-    en: 'Enter expiry as MM/YY.', tr: 'Son kullanmayı AA/YY olarak girin.', ar: 'أدخل الانتهاء بصيغة MM/YY.', es: 'Caducidad en MM/AA.', de: 'Ablauf als MM/JJ.', fr: 'Expiration au format MM/AA.', ru: 'Срок в формате ММ/ГГ.',
+  'cookie.ok': {
+    en: 'Got it', tr: 'Anladım', ar: 'حسناً', es: 'Entendido', de: 'Verstanden',
+    fr: 'J’ai compris', ru: 'Понятно',
   },
-  'pay.err.cvc': {
-    en: 'Enter a valid CVC.', tr: 'Geçerli CVC girin.', ar: 'أدخل CVC صالحاً.', es: 'Introduzca un CVC válido.', de: 'Gültigen CVC eingeben.', fr: 'Entrez un CVC valide.', ru: 'Введите корректный CVC.',
+  'cookie.privacy': {
+    en: 'Privacy policy', tr: 'Gizlilik politikası', ar: 'سياسة الخصوصية',
+    es: 'Política de privacidad', de: 'Datenschutz', fr: 'Confidentialité',
+    ru: 'Политика конфиденциальности',
+  },
+  'support.whatsapp': {
+    en: 'Chat on WhatsApp', tr: 'WhatsApp’tan yazın', ar: 'تواصل عبر واتساب',
+    es: 'Escríbenos por WhatsApp', de: 'Auf WhatsApp schreiben',
+    fr: 'Écrire sur WhatsApp', ru: 'Написать в WhatsApp',
+  },
+  'legal.notPublished': {
+    en: 'This policy has not been published yet. Contact us for details before ordering.',
+    tr: 'Bu metin henüz yayımlanmadı. Sipariş öncesi bilgi için bize ulaşın.',
+    ar: 'لم يتم نشر هذه السياسة بعد. تواصل معنا قبل الطلب.',
+    es: 'Esta política aún no se ha publicado. Contáctenos antes de pedir.',
+    de: 'Diese Richtlinie ist noch nicht veröffentlicht. Bitte vor einer Bestellung Kontakt aufnehmen.',
+    fr: 'Cette politique n’est pas encore publiée. Contactez-nous avant de commander.',
+    ru: 'Этот документ ещё не опубликован. Свяжитесь с нами перед заказом.',
+  },
+  'legal.sellerInfo': {
+    en: 'Seller information', tr: 'Satıcı bilgileri', ar: 'معلومات البائع',
+    es: 'Información del vendedor', de: 'Verkäuferangaben', fr: 'Informations du vendeur',
+    ru: 'Сведения о продавце',
+  },
+  'footer.refund': {
+    en: 'Refunds', tr: 'İade', ar: 'الاسترداد', es: 'Reembolsos', de: 'Rückerstattung',
+    fr: 'Remboursements', ru: 'Возврат',
+  },
+  'footer.distanceSales': {
+    en: 'Distance sales', tr: 'Mesafeli satış', ar: 'البيع عن بُعد',
+    es: 'Venta a distancia', de: 'Fernabsatz', fr: 'Vente à distance', ru: 'Дистанционная продажа',
+  },
+  'track.reference': {
+    en: 'Reference number', tr: 'Referans numarası', ar: 'الرقم المرجعي',
+    es: 'Número de referencia', de: 'Referenznummer', fr: 'Numéro de référence', ru: 'Номер заявки',
+  },
+  'track.email': {
+    en: 'Email used on the application', tr: 'Başvuruda kullandığınız e-posta',
+    ar: 'البريد الإلكتروني المستخدم في الطلب', es: 'Correo usado en la solicitud',
+    de: 'Im Antrag verwendete E-Mail', fr: 'E-mail utilisé pour la demande',
+    ru: 'Email, указанный в заявке',
+  },
+  'track.submit': {
+    en: 'Check status', tr: 'Durumu sorgula', ar: 'تحقق من الحالة',
+    es: 'Consultar estado', de: 'Status prüfen', fr: 'Vérifier le statut', ru: 'Проверить статус',
+  },
+  'track.searching': {
+    en: 'Checking…', tr: 'Sorgulanıyor…', ar: 'جارٍ التحقق…',
+    es: 'Consultando…', de: 'Wird geprüft…', fr: 'Vérification…', ru: 'Проверка…',
+  },
+  'track.needBoth': {
+    en: 'Enter both your reference number and the email you applied with.',
+    tr: 'Hem referans numaranızı hem de başvuruda kullandığınız e-postayı girin.',
+    ar: 'أدخل الرقم المرجعي والبريد الإلكتروني المستخدم في الطلب.',
+    es: 'Introduzca la referencia y el correo con el que solicitó.',
+    de: 'Geben Sie Referenznummer und die verwendete E-Mail ein.',
+    fr: 'Saisissez la référence et l’e-mail utilisé.',
+    ru: 'Укажите номер заявки и email, с которого подавали.',
+  },
+  'track.notFound': {
+    en: 'No application matches that reference and email.',
+    tr: 'Bu referans ve e-posta ile eşleşen başvuru bulunamadı.',
+    ar: 'لا يوجد طلب مطابق لهذا المرجع والبريد الإلكتروني.',
+    es: 'Ninguna solicitud coincide con esa referencia y correo.',
+    de: 'Kein Antrag passt zu dieser Referenz und E-Mail.',
+    fr: 'Aucune demande ne correspond à cette référence et cet e-mail.',
+    ru: 'Заявка с таким номером и email не найдена.',
+  },
+  'track.status': {
+    en: 'Status', tr: 'Durum', ar: 'الحالة', es: 'Estado', de: 'Status', fr: 'Statut', ru: 'Статус',
+  },
+  'track.submittedOn': {
+    en: 'Submitted', tr: 'Gönderildi', ar: 'تاريخ الإرسال',
+    es: 'Enviada', de: 'Eingereicht', fr: 'Envoyée', ru: 'Отправлено',
+  },
+  'track.lastUpdate': {
+    en: 'Last update', tr: 'Son güncelleme', ar: 'آخر تحديث',
+    es: 'Última actualización', de: 'Letzte Aktualisierung', fr: 'Dernière mise à jour',
+    ru: 'Обновлено',
+  },
+  'track.amount': {
+    en: 'Amount', tr: 'Tutar', ar: 'المبلغ', es: 'Importe', de: 'Betrag', fr: 'Montant', ru: 'Сумма',
+  },
+  'track.history': {
+    en: 'History', tr: 'Geçmiş', ar: 'السجل', es: 'Historial', de: 'Verlauf', fr: 'Historique', ru: 'История',
+  },
+  'track.pay': {
+    en: 'Pay securely', tr: 'Güvenle öde', ar: 'ادفع بأمان',
+    es: 'Pagar de forma segura', de: 'Sicher bezahlen', fr: 'Payer en toute sécurité', ru: 'Оплатить безопасно',
+  },
+  'track.paying': {
+    en: 'Opening payment…', tr: 'Ödeme açılıyor…', ar: 'جارٍ فتح الدفع…',
+    es: 'Abriendo el pago…', de: 'Zahlung wird geöffnet…', fr: 'Ouverture du paiement…', ru: 'Открытие оплаты…',
+  },
+  'track.payError': {
+    en: 'Could not start payment. Please try again.',
+    tr: 'Ödeme başlatılamadı. Lütfen tekrar deneyin.',
+    ar: 'تعذر بدء الدفع. حاول مرة أخرى.',
+    es: 'No se pudo iniciar el pago. Inténtelo de nuevo.',
+    de: 'Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.',
+    fr: 'Impossible de lancer le paiement. Réessayez.',
+    ru: 'Не удалось начать оплату. Повторите попытку.',
+  },
+  'track.paidThanks': {
+    en: 'Payment received. Thank you — we will continue processing your application.',
+    tr: 'Ödeme alındı. Teşekkürler — başvurunuzun işlemine devam ediyoruz.',
+    ar: 'تم استلام الدفع. شكرًا — سنواصل معالجة طلبك.',
+    es: 'Pago recibido. Gracias — seguiremos tramitando su solicitud.',
+    de: 'Zahlung eingegangen. Danke — wir bearbeiten Ihren Antrag weiter.',
+    fr: 'Paiement reçu. Merci — nous poursuivons le traitement.',
+    ru: 'Оплата получена. Спасибо — продолжаем обработку заявки.',
+  },
+  'confirm.err.generic': {
+    en: 'Could not submit your application. Please try again.',
+    tr: 'Başvurunuz gönderilemedi. Lütfen tekrar deneyin.',
+    ar: 'تعذر إرسال طلبك. حاول مرة أخرى.',
+    es: 'No se pudo enviar la solicitud. Inténtelo de nuevo.',
+    de: 'Antrag konnte nicht gesendet werden. Bitte erneut versuchen.',
+    fr: 'Impossible d’envoyer la demande. Réessayez.',
+    ru: 'Не удалось отправить заявку. Повторите попытку.',
   },
 
   // ── Site chrome (welcome hero, services, country card, insurance, eSIM) ──
