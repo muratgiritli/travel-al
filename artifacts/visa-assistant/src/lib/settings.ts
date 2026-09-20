@@ -201,6 +201,11 @@ export interface IntegrationSettings {
   whatsapp_message: string;
 }
 
+/** Runtime flags derived from server env — never stored in admin settings. */
+export interface FeatureFlags {
+  stripe_enabled: boolean;
+}
+
 export interface SiteSettings {
   pricing: PricingSettings;
   chat: ChatSettings;
@@ -211,6 +216,7 @@ export interface SiteSettings {
   trust: TrustSettings;
   legal: LegalSettings;
   integrations: IntegrationSettings;
+  features: FeatureFlags;
 }
 
 /** Admin-editable offer/option card returned by GET /api/travel/countries/:id. */
@@ -388,6 +394,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     whatsapp_number: '',
     whatsapp_message: '',
   },
+  features: {
+    stripe_enabled: false,
+  },
 };
 
 // ─── In-module cache + fetcher ────────────────────────────────────────────────
@@ -464,6 +473,7 @@ export function fetchSettings(): Promise<SiteSettings> {
         },
         legal: { ...DEFAULT_SETTINGS.legal, ...(d.legal ?? {}) },
         integrations: { ...DEFAULT_SETTINGS.integrations, ...(d.integrations ?? {}) },
+        features: { ...DEFAULT_SETTINGS.features, ...(d.features ?? {}) },
       };
       return cached;
     })

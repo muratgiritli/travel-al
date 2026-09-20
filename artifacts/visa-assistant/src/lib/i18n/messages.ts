@@ -501,6 +501,10 @@ const ROWS: Record<string, Row> = {
     en: 'Refunds', tr: 'İade', ar: 'الاسترداد', es: 'Reembolsos', de: 'Rückerstattung',
     fr: 'Remboursements', ru: 'Возврат',
   },
+  'footer.distanceSales': {
+    en: 'Distance sales', tr: 'Mesafeli satış', ar: 'البيع عن بُعد',
+    es: 'Venta a distancia', de: 'Fernabsatz', fr: 'Vente à distance', ru: 'Дистанционная продажа',
+  },
   'track.reference': {
     en: 'Reference number', tr: 'Referans numarası', ar: 'الرقم المرجعي',
     es: 'Número de referencia', de: 'Referenznummer', fr: 'Numéro de référence', ru: 'Номер заявки',
@@ -548,6 +552,38 @@ const ROWS: Record<string, Row> = {
     en: 'Last update', tr: 'Son güncelleme', ar: 'آخر تحديث',
     es: 'Última actualización', de: 'Letzte Aktualisierung', fr: 'Dernière mise à jour',
     ru: 'Обновлено',
+  },
+  'track.amount': {
+    en: 'Amount', tr: 'Tutar', ar: 'المبلغ', es: 'Importe', de: 'Betrag', fr: 'Montant', ru: 'Сумма',
+  },
+  'track.history': {
+    en: 'History', tr: 'Geçmiş', ar: 'السجل', es: 'Historial', de: 'Verlauf', fr: 'Historique', ru: 'История',
+  },
+  'track.pay': {
+    en: 'Pay securely', tr: 'Güvenle öde', ar: 'ادفع بأمان',
+    es: 'Pagar de forma segura', de: 'Sicher bezahlen', fr: 'Payer en toute sécurité', ru: 'Оплатить безопасно',
+  },
+  'track.paying': {
+    en: 'Opening payment…', tr: 'Ödeme açılıyor…', ar: 'جارٍ فتح الدفع…',
+    es: 'Abriendo el pago…', de: 'Zahlung wird geöffnet…', fr: 'Ouverture du paiement…', ru: 'Открытие оплаты…',
+  },
+  'track.payError': {
+    en: 'Could not start payment. Please try again.',
+    tr: 'Ödeme başlatılamadı. Lütfen tekrar deneyin.',
+    ar: 'تعذر بدء الدفع. حاول مرة أخرى.',
+    es: 'No se pudo iniciar el pago. Inténtelo de nuevo.',
+    de: 'Zahlung konnte nicht gestartet werden. Bitte erneut versuchen.',
+    fr: 'Impossible de lancer le paiement. Réessayez.',
+    ru: 'Не удалось начать оплату. Повторите попытку.',
+  },
+  'track.paidThanks': {
+    en: 'Payment received. Thank you — we will continue processing your application.',
+    tr: 'Ödeme alındı. Teşekkürler — başvurunuzun işlemine devam ediyoruz.',
+    ar: 'تم استلام الدفع. شكرًا — سنواصل معالجة طلبك.',
+    es: 'Pago recibido. Gracias — seguiremos tramitando su solicitud.',
+    de: 'Zahlung eingegangen. Danke — wir bearbeiten Ihren Antrag weiter.',
+    fr: 'Paiement reçu. Merci — nous poursuivons le traitement.',
+    ru: 'Оплата получена. Спасибо — продолжаем обработку заявки.',
   },
   'confirm.err.generic': {
     en: 'Could not submit your application. Please try again.',

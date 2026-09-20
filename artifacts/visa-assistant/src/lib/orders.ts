@@ -138,3 +138,25 @@ export async function trackOrder(code: string, email: string): Promise<TrackedOr
   const data = (await res.json()) as { order: TrackedOrder };
   return data.order;
 }
+
+/** Starts hosted Stripe Checkout. 404 means payments are not enabled. */
+export async function startCheckout(code: string, email: string): Promise<string> {
+  const res = await fetch(`/api/travel/orders/${encodeURIComponent(code)}/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    let msg = 'Could not start payment.';
+    try {
+      const data = await res.json();
+      if (data?.error) msg = data.error;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(msg);
+  }
+  const data = (await res.json()) as { url?: string };
+  if (!data.url) throw new Error('Could not start payment.');
+  return data.url;
+}

@@ -9,6 +9,7 @@ export default function SiteFooter() {
     { href: '/privacy', label: t('footer.privacy') },
     { href: '/terms', label: t('footer.terms') },
     { href: '/refunds', label: t('footer.refund') },
+    { href: '/distance-sales', label: t('footer.distanceSales') },
     { href: '/track', label: t('footer.track') },
   ];
 

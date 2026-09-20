@@ -9,6 +9,7 @@ import { countryBodyHtml, PageRenderer } from "./lib/renderPage";
 import { findOrderForTracking, updateOrderStatus } from "./lib/ordersStore";
 import { verifyWebhook } from "./lib/stripe";
 import { logger } from "./lib/logger";
+import { captureException } from "./lib/sentry";
 
 const app: Express = express();
 
@@ -95,6 +96,7 @@ app.post(
       res.json({ received: true });
     } catch (err) {
       logger.error({ err }, "Stripe webhook handling failed");
+      void captureException(err, { kind: "stripe-webhook" });
       res.status(500).json({ error: "Webhook handling failed" });
     }
   },
@@ -102,6 +104,10 @@ app.post(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
+});
 
 app.use("/api", router);
 
@@ -114,7 +120,17 @@ const SITE_URL = (process.env["PUBLIC_SITE_URL"] || "https://turkiyetraveloffice
 app.get("/sitemap.xml", async (_req, res) => {
   try {
     const slugs = await listCountrySlugs();
-    const paths = ["", "/faq", "/contact", "/track", "/privacy", "/terms", ...slugs.map((s) => `/${s}`)];
+    const paths = [
+      "",
+      "/faq",
+      "/contact",
+      "/track",
+      "/privacy",
+      "/terms",
+      "/refunds",
+      "/distance-sales",
+      ...slugs.map((s) => `/${s}`),
+    ];
     const body = paths
       .map((p) => `  <url><loc>${SITE_URL}${p}</loc></url>`)
       .join("\n");
@@ -159,10 +175,44 @@ if (staticDir && existsSync(staticDir)) {
     "/track",
     "/privacy",
     "/terms",
+    "/refunds",
+    "/distance-sales",
     "/checkout",
     "/next",
     "/admin",
   ]);
+
+  const STATIC_PAGE_SEO: Record<string, { title: string; description: string }> = {
+    "/faq": {
+      title: "Türkiye travel FAQ — entry, insurance and eSIM",
+      description:
+        "Answers about Türkiye entry requirements, travel insurance and eSIM packages.",
+    },
+    "/contact": {
+      title: "Contact Türkiye Travel Office",
+      description: "Get in touch about a Türkiye entry application, insurance or eSIM.",
+    },
+    "/track": {
+      title: "Track your Türkiye travel application",
+      description: "Check the status of your application with your reference number and email.",
+    },
+    "/privacy": {
+      title: "Privacy policy — Türkiye Travel Office",
+      description: "How Türkiye Travel Office collects and uses personal information.",
+    },
+    "/terms": {
+      title: "Terms of use — Türkiye Travel Office",
+      description: "Terms that apply when you use Türkiye Travel Office.",
+    },
+    "/refunds": {
+      title: "Cancellation and refunds — Türkiye Travel Office",
+      description: "Cancellation and refund policy for applications and add-on services.",
+    },
+    "/distance-sales": {
+      title: "Distance sales agreement — Türkiye Travel Office",
+      description: "Distance sales information required for online purchases from Türkiye.",
+    },
+  };
 
   app.use(async (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -217,19 +267,35 @@ if (staticDir && existsSync(staticDir)) {
         }
       }
 
+      const pagePath = req.path.replace(/\/$/, "") || "/";
+      const staticSeo = STATIC_PAGE_SEO[pagePath];
       send(
         renderer.render(
           {
-            title: "Türkiye Entry Guide — entry requirements, travel insurance and eSIM",
+            title:
+              staticSeo?.title
+              || "Türkiye Entry Guide — entry requirements, travel insurance and eSIM",
             description:
-              "Check your Türkiye entry requirements by passport country, then arrange travel insurance and an eSIM in one place.",
-            canonicalPath: req.path === "/" ? "/" : req.path,
+              staticSeo?.description
+              || "Check your Türkiye entry requirements by passport country, then arrange travel insurance and an eSIM in one place.",
+            canonicalPath: pagePath,
+            jsonLd:
+              pagePath === "/"
+                ? {
+                    "@context": "https://schema.org",
+                    "@type": "TravelAgency",
+                    name: "Türkiye Travel Office",
+                    url: SITE_URL,
+                    areaServed: "TR",
+                  }
+                : undefined,
           },
           SITE_URL,
         ),
       );
     } catch (err) {
       logger.error({ err, path: req.path }, "page render failed");
+      void captureException(err, { kind: "page-render", path: req.path });
       res.sendFile(path.join(staticDir, "index.html"), (sendErr) => {
         if (sendErr) next(sendErr);
       });

@@ -24,7 +24,9 @@ import {
   type OrderType,
 } from "../lib/ordersStore";
 import { rateLimit } from "../lib/rateLimit";
+import { logger } from "../lib/logger";
 import { createCheckoutSession, isStripeConfigured } from "../lib/stripe";
+import { captureException } from "../lib/sentry";
 import {
   adminNotifyAddress,
   isMailConfigured,
@@ -563,6 +565,9 @@ function publicSettings(s: SiteSettings) {
     trust: s.trust,
     legal: s.legal,
     integrations: s.integrations,
+    features: {
+      stripe_enabled: isStripeConfigured(),
+    },
   };
 }
 
@@ -621,6 +626,29 @@ router.get("/travel/settings", async (_req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * Browser crashes land here so we can log them (and forward to Sentry when
+ * a DSN is set) without shipping a third-party script to every visitor.
+ */
+router.post(
+  "/travel/client-error",
+  rateLimit({ name: "client-error", windowMs: 10 * 60 * 1000, max: 20 }),
+  (req, res) => {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const message = String((body as { message?: unknown }).message || "").slice(0, 400);
+    if (!message) {
+      res.status(400).json({ error: "message required" });
+      return;
+    }
+    const url = String((body as { url?: unknown }).url || "").slice(0, 300);
+    const stack = String((body as { stack?: unknown }).stack || "").slice(0, 2000);
+    const kind = String((body as { kind?: unknown }).kind || "client").slice(0, 40);
+    logger.warn({ url, message, kind }, "client error");
+    void captureException(new Error(message), { kind, url, stack });
+    res.json({ ok: true });
+  },
+);
 
 /** Score admin knowledge items against the user message (simple keyword match). */
 function pickKnowledgeItems(

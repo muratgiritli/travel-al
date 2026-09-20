@@ -5,6 +5,7 @@ import CookieNotice from '@/components/CookieNotice';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import { legacyPathSegment } from '@/lib/wireCodes';
 import { useAnalytics } from '@/lib/useAnalytics';
+import { useErrorTracking } from '@/lib/useErrorTracking';
 import { I18nProvider } from '@/lib/i18n';
 
 // Only the chat entry point ships in the first bundle; everything else is
@@ -86,6 +87,7 @@ function Router() {
 
 function Shell() {
   useAnalytics();
+  useErrorTracking();
   return (
     <>
       <Suspense fallback={<RouteFallback />}>

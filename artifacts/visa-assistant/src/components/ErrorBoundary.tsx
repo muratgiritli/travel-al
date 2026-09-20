@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportClientError } from '@/lib/reportClientError';
 
 interface Props {
   children: ReactNode;
@@ -18,6 +19,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Unhandled UI error', error, info.componentStack);
+    reportClientError(error, { kind: 'react', component: (info.componentStack || '').slice(0, 400) });
   }
 
   render() {
