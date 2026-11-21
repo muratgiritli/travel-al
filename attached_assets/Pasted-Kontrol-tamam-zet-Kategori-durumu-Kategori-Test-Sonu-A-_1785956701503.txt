@@ -1,0 +1,52 @@
+Kontrol tamam. Özet:
+
+### Kategori durumu
+| Kategori | Test | Sonuç |
+|---|---|---|
+| Açılış `/` | OK | “Which country issued your passport?” — gövdede visa yok |
+| Vize muaf (Germany) | HATA | Yanlış şablon: **Get Your E-Visa** çıkıyor (muaf sayfa olmalı) |
+| Direct e-Visa (Vietnam) | OK | e-Visa + insurance + APPLY NOW |
+| Koşullu (Bangladesh) | OK | Schengen şartı + option kartları |
+| Yaşa özel (Egypt) | OK | Under 15 / Over 45 + airline şartı |
+| Sticker (Nigeria) | OK | Embassy Sticker + no online e-Visa |
+
+### “visa” kelimesi — BAŞARISIZ
+Sitede çok yerde var:
+- Title / meta: **Visa Assistant**
+- Brand: **Turkey Visa Office**
+- Metinler: `E-Visa`, `Get a Turkey E-Visa`, `valid visa`…
+- Kod: `/api/visa/countries`, `/api/visa/chat`, `/visa${cta}`
+- Bundle’da **66+** “visa” geçişi
+
+### Masaüstü / mobil
+- Masaüstü (1280): yatay taşma yok
+- Samsung (360): ülke sayfalarında yatay taşma yok
+- Ana chat: ülke listesi geliyor (202 option)
+- Alt bar Samsung safe-area konusu hâlâ riskli (önceki düzeltme deploy edilmediyse)
+
+---
+
+Replit’e yapıştır (visa temizliği + Germany fix):
+
+```text
+CRITICAL FIXES for perfect-site.replit.app:
+
+1) REMOVE the word "visa" from ALL user-facing UI, titles, meta, brand, routes, and API paths.
+   Replace branding:
+   - Title: "Turkey Travel Assistant" (NOT Visa Assistant)
+   - Brand: "Turkey Travel Assistant" (NOT Turkey Visa Office)
+   - Use "entry permit" / "travel authorization" / "e-permit" instead of "visa" / "e-Visa" in visible text
+   - Rename routes: /api/visa/* -> /api/travel/* ; remove /visa prefix from CTAs
+   - Keep functionality the same
+
+2) CATEGORY TEMPLATES must be correct:
+   - visa_exempt (Germany/France): insurance page only, NOT e-permit options page
+   - evisa_direct (Vietnam): apply options + insurance
+   - evisa_conditional (Bangladesh): Schengen/USA/UK/Ireland conditions
+   - age_special (Egypt): age pathways
+   - sticker_mission (Nigeria): embassy sticker consultancy
+
+3) Opening "/" must stay country picker only.
+4) Samsung bottom footer: padding-bottom max(28px, calc(16px + env(safe-area-inset-bottom)))
+5) Redeploy and confirm zero visible "visa"/"e-Visa" strings in UI.
+```

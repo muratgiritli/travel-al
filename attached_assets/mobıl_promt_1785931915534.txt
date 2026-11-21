@@ -1,0 +1,30 @@
+Implement the FIRST OPENING SCREEN for “Turkey Travel Assistant” exactly like the attached MOBILE screenshot.
+
+This is Phase 1 opening only:
+ChatGPT-like live chat with passport country selection INSIDE the chat.
+No separate landing page.
+
+MATCH THE ATTACHED MOBILE IMAGE:
+- Header: back arrow, circular gold mosque logo, “Turkey Travel Assistant”, green Online, 3-dot menu
+- Assistant bubble: “Welcome! To help you better, which country issued your passport?”
+- In-chat white card titled “My passport”
+- Search field: “Search country”
+- Popular chips with FLAG + CODE only:
+  SA, EG, AE, CN, PK, IN, PH
+- Selected chip example: PK with navy border + checkmark
+- Scrollable country list under chips: flag + full name + code
+- Bottom composer LOCKED:
+  placeholder “Select your passport country to start chatting…”
+- Paperclip + disabled send
+- Footer: “AI guidance · Human travel experts available.”
+
+RULES:
+- Mobile-first, full-width chat
+- No visa text
+- No service cards
+- No WhatsApp
+- No Continue gate page
+- Destination is always Turkey; only passport country is asked
+- Pixel-close to the attached mobile visual
+
+Build this screen now as "/".

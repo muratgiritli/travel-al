@@ -1,0 +1,7 @@
+turkiyetraveloffice.com, www.turkiyetraveloffice.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:5017
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	}
+}

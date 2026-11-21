@@ -1,0 +1,200 @@
+{
+  "category": "evisa_direct",
+  "source": "https://www.mfa.gov.tr/yabancilarin-tabi-oldugu-vize-rejimi.tr.mfa",
+  "note": "Ordinary passport holders who can obtain e-Visa directly (no Schengen/US precondition). Insurance is product policy.",
+  "defaults": {
+    "category": "evisa_direct",
+    "insurance_required": true,
+    "visa_summary": "e-Visa required",
+    "stay_rule": "Citizens must obtain an e-Visa before travel to Türkiye via www.evisa.gov.tr (or an authorized channel).",
+    "headline": "You need an e-Visa — insurance is also mandatory",
+    "features": [
+      "e-Visa available online",
+      "Travel insurance required",
+      "Continue to application steps"
+    ],
+    "price_label": "Next step: e-Visa + insurance",
+    "price_example": "Application details will be shown on the next page.",
+    "cta": "Continue",
+    "cta_href": "/next",
+    "is_active": true,
+    "admin_html_notes": "",
+    "ai_extra_context": ""
+  },
+  "countries": [
+    {
+      "id": "ag",
+      "name": "Antigua and Barbuda",
+      "name_tr": "Antigua-Barbuda",
+      "iso2": "AG",
+      "flag_emoji": "🇦🇬",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Antigua and Barbuda ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "bs",
+      "name": "Bahamas",
+      "name_tr": "Bahamalar",
+      "iso2": "BS",
+      "flag_emoji": "🇧🇸",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Bahamian ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "bb",
+      "name": "Barbados",
+      "name_tr": "Barbados",
+      "iso2": "BB",
+      "flag_emoji": "🇧🇧",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Barbadian ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "tl",
+      "name": "Timor-Leste",
+      "name_tr": "Doğu Timor",
+      "iso2": "TL",
+      "flag_emoji": "🇹🇱",
+      "visa_summary": "e-Visa • 30 days single entry",
+      "stay_rule": "Timor-Leste citizens can obtain a 30-day single-entry e-Visa for Türkiye at www.evisa.gov.tr."
+    },
+    {
+      "id": "do",
+      "name": "Dominican Republic",
+      "name_tr": "Dominik Cumhuriyeti",
+      "iso2": "DO",
+      "flag_emoji": "🇩🇴",
+      "visa_summary": "e-Visa required",
+      "stay_rule": "Dominican Republic ordinary passport holders need a visa and can obtain an e-Visa for Türkiye."
+    },
+    {
+      "id": "am",
+      "name": "Armenia",
+      "name_tr": "Ermenistan",
+      "iso2": "AM",
+      "flag_emoji": "🇦🇲",
+      "visa_summary": "e-Visa required",
+      "stay_rule": "Armenian ordinary passport holders can obtain an e-Visa for Türkiye online or via a Turkish mission."
+    },
+    {
+      "id": "fj",
+      "name": "Fiji",
+      "name_tr": "Fiji",
+      "iso2": "FJ",
+      "flag_emoji": "🇫🇯",
+      "visa_summary": "e-Visa required",
+      "stay_rule": "Fijian ordinary passport holders can obtain an e-Visa for Türkiye at www.evisa.gov.tr."
+    },
+    {
+      "id": "za",
+      "name": "South Africa",
+      "name_tr": "Güney Afrika",
+      "iso2": "ZA",
+      "flag_emoji": "🇿🇦",
+      "visa_summary": "e-Visa • fee-free",
+      "stay_rule": "South African ordinary passport holders can obtain a fee-free e-Visa for Türkiye at www.evisa.gov.tr."
+    },
+    {
+      "id": "hk-bno",
+      "name": "Hong Kong (BNO)",
+      "name_tr": "Hong Kong (BNO)",
+      "iso2": "HK",
+      "flag_emoji": "🇭🇰",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "British National Overseas (BNO) passport holders from Hong Kong can obtain a 90-day multiple-entry e-Visa for Türkiye.",
+      "ai_extra_context": "This entry is for BNO passports only. Hong Kong SAR passports are visa-exempt and belong to the other category."
+    },
+    {
+      "id": "jm",
+      "name": "Jamaica",
+      "name_tr": "Jamaika",
+      "iso2": "JM",
+      "flag_emoji": "🇯🇲",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Jamaican ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "cy",
+      "name": "Cyprus (Greek Cypriot Admin.)",
+      "name_tr": "Kıbrıs Rum Kesimi (GKRY)",
+      "iso2": "CY",
+      "flag_emoji": "🇨🇾",
+      "visa_summary": "e-Visa required",
+      "stay_rule": "GKRY passport holders can obtain an e-Visa for Türkiye. As of 2 January 2026, border sticker/bandrol visas are no longer issued.",
+      "ai_extra_context": "Border bandrol visa ended on 2 January 2026 for GKRY passports. Use e-Visa or mission."
+    },
+    {
+      "id": "mv",
+      "name": "Maldives",
+      "name_tr": "Maldivler",
+      "iso2": "MV",
+      "flag_emoji": "🇲🇻",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Maldivian ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "mu",
+      "name": "Mauritius",
+      "name_tr": "Mauritius",
+      "iso2": "MU",
+      "flag_emoji": "🇲🇺",
+      "visa_summary": "e-Visa • 30 days multiple entry",
+      "stay_rule": "Mauritian ordinary passport holders can obtain a 30-day multiple-entry e-Visa online (90-day visas also available via Turkish missions)."
+    },
+    {
+      "id": "mx",
+      "name": "Mexico",
+      "name_tr": "Meksika",
+      "iso2": "MX",
+      "flag_emoji": "🇲🇽",
+      "visa_summary": "e-Visa • 30 days single entry (fee-free)",
+      "stay_rule": "Mexican ordinary passport holders can obtain a fee-free 30-day single-entry e-Visa for Türkiye (90-day multiple-entry visas available via missions)."
+    },
+    {
+      "id": "na",
+      "name": "Namibia",
+      "name_tr": "Namibya",
+      "iso2": "NA",
+      "flag_emoji": "🇳🇦",
+      "visa_summary": "e-Visa required",
+      "stay_rule": "As of 5 May 2025, Namibian ordinary passport holders can obtain an e-Visa for Türkiye at www.evisa.gov.tr.",
+      "ai_extra_context": "e-Visa availability started on 5 May 2025."
+    },
+    {
+      "id": "lc",
+      "name": "Saint Lucia",
+      "name_tr": "Saint Lucia",
+      "iso2": "LC",
+      "flag_emoji": "🇱🇨",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Saint Lucian ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "vc",
+      "name": "Saint Vincent and the Grenadines",
+      "name_tr": "Saint Vincent ve Grenadines",
+      "iso2": "VC",
+      "flag_emoji": "🇻🇨",
+      "visa_summary": "e-Visa • 90 days multiple entry",
+      "stay_rule": "Saint Vincent and the Grenadines ordinary passport holders can obtain a 90-day multiple-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "sr",
+      "name": "Suriname",
+      "name_tr": "Surinam",
+      "iso2": "SR",
+      "flag_emoji": "🇸🇷",
+      "visa_summary": "e-Visa • 30 days single entry",
+      "stay_rule": "Surinamese ordinary passport holders can obtain a 30-day single-entry e-Visa for Türkiye."
+    },
+    {
+      "id": "vn",
+      "name": "Vietnam",
+      "name_tr": "Vietnam",
+      "iso2": "VN",
+      "flag_emoji": "🇻🇳",
+      "visa_summary": "e-Visa • 30 days single entry",
+      "stay_rule": "Vietnamese ordinary passport holders can obtain a 30-day single-entry e-Visa for Türkiye at www.evisa.gov.tr."
+    }
+  ]
+}

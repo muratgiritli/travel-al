@@ -1,0 +1,38 @@
+Implement the DESKTOP version of the FIRST OPENING SCREEN for “Turkey Travel Assistant”.
+
+Use the attached DESKTOP image for visual style, colors, spacing, and components.
+BUT implement it as a REAL production desktop UI, not a storyboard.
+
+CRITICAL DESKTOP LAYOUT:
+- Soft light gray page background
+- ONE centered chat column (max-width ~720px)
+- Do NOT split into left/right dual panels
+- Do NOT show “before” and “after” states side by side
+- Same single chat flow as mobile
+
+OPENING STATE (match attached design language):
+- Header: logo, “Turkey Travel Assistant”, Online, menu
+- Assistant: “Welcome! To help you better, which country issued your passport?”
+- In-chat “My passport” card
+- Search country
+- Popular chips FLAG + CODE only: SA EG AE CN PK IN PH
+- Selected chip style like attached (navy border + check)
+- Country list with flag + name + code
+- Locked composer:
+  “Select your passport country to start chatting…”
+- Footer trust text
+
+AFTER COUNTRY SELECTED (same centered column, next state):
+- Collapse/hide big selector card
+- User bubble: 🇵🇰 PK
+- Assistant: “How can I help you?”
+- Unlock composer: “Message Turkey Travel Assistant...”
+
+RULES:
+- Desktop must feel premium and centered
+- No dual-column storyboard
+- No visa text / no service cards on opening
+- No WhatsApp
+- Visual quality must match attached desktop mockup style
+
+Build desktop-responsive "/" now.

@@ -1,0 +1,192 @@
+Replit Agent’a **hepsini kopyala-yapıştır** (Publish sonrası tekrar ver):
+
+```text
+CRITICAL FIX SPRINT — OBEY EXACTLY. NO FREESTYLE.
+Site: https://perfect-site.replit.app/
+If you redesign, invent navigation, or keep the current Pakistan separate-page UX, the task FAILS.
+At the end reply exactly: "I did not change anything outside the prompt."
+Then give PASS/FAIL for checklist A–L.
+
+==================================================
+CURRENT LIVE FAILURES (JUST RE-CHECKED AFTER PUBLISH)
+==================================================
+STILL BROKEN RIGHT NOW:
+1) Selecting Pakistan leaves chat and opens https://perfect-site.replit.app/pakistan
+2) Pakistan page has invented top links: FAQ + Track
+3) Pakistan page has invented bottom tab bar: Home / Track / FAQ / Contact
+4) /faq /track /contact /checkout all show: Country not found
+5) Germany stays in chat (good), Pakistan does not (bad) — inconsistent architecture
+6) False "No country found" can flash on "/" before countries load
+
+YOU MUST FIX THESE. DO NOT IGNORE.
+
+==================================================
+LOCKED PRODUCT RULE (NON-NEGOTIABLE)
+==================================================
+This is a CHAT app.
+- Public entry is ONLY "/"
+- Country picker is ONLY the in-chat card "My passport"
+- After ANY country is selected, KEEP URL on "/"
+- Render the result INSIDE the chat
+- NEVER route to /pakistan /egypt /nigeria /vietnam /germany as a separate product page on selection
+
+HARD FAIL CONDITION:
+If click Pakistan changes location.pathname to "/pakistan", FAIL.
+
+==================================================
+P0 FIX #1 — STOP LEAVING CHAT ON COUNTRY SELECT
+==================================================
+Find the onCountrySelect / navigate(`/${slug}`) logic and REMOVE it.
+
+Required behavior:
+1) User selects country in chat card
+2) URL stays "/"
+3) Show chip: "Passport selected: {Country}"
+4) Collapse/hide the country picker
+5) Show category result cards in the chat thread
+6) Bottom area remains chat composer only
+
+For deep links:
+- /{slug} may exist ONLY as a redirect into chat state
+- Example: /pakistan -> /?country=pakistan (or equivalent) and show same in-chat result
+- Deep link must NOT render the separate landing shell with FAQ/Track + bottom tabs
+
+==================================================
+P0 FIX #2 — DELETE INVENTED HEADER / FOOTER
+==================================================
+DELETE completely from country-result UI:
+- Top header links FAQ / Track
+- Fixed bottom nav Home / Track / FAQ / Contact
+- Any second site chrome around country options
+
+Keep ONLY chat chrome:
+- Chat header: logo + "Turkey Travel Assistant" + Online + language
+- Chat composer: input + send
+- Optional Ask AI bottom sheet
+
+No app-like tab bar. No evisacity clone shell.
+
+==================================================
+P0 FIX #3 — RESERVED ROUTES MUST NOT BE COUNTRY SLUGS
+==================================================
+These currently fail with Country not found:
+- /faq
+- /track
+- /contact
+- /checkout
+
+Fix:
+1) Exclude reserved paths from country catch-all
+2) Either implement real pages OR remove every link to them
+3) Preferred: remove invented FAQ/Track/Contact links entirely
+4) /checkout MUST work for insurance CTA (not Country not found)
+5) /next may remain for APPLY NOW
+6) /visa and /visa/ must redirect to /
+
+Acceptance:
+Visiting /faq /track /contact /checkout must NEVER show "Country not found".
+
+==================================================
+P0 FIX #4 — CATEGORY RESULTS IN CHAT (ALL COUNTRIES)
+==================================================
+All of these must stay on "/" and render in chat:
+
+1) Germany (exempt)
+- Insurance required card
+- CTA: Get travel insurance -> working /checkout
+- No e-permit options page
+
+2) Vietnam (direct e-permit)
+- In-chat: need e-permit + mandatory insurance
+- APPLY NOW -> /next
+- Must not depend on incomplete /vietnam landing
+
+3) Pakistan (conditional) ★ CRITICAL
+- Stay on "/"
+- In-chat options:
+  OPTION 1: e-Permit with residence permit condition (Schengen/EU/UK/USA/Canada/Australia/Japan/South Korea)
+  OPTION 2: e-Permit with physical entry permit condition (Schengen/USA/UK/Ireland)
+  OPTION 3: Holiday Entry — GCC Residence
+  OPTION 4: Sticker Permit Consultancy
+- Each: Insurance required + APPLY NOW -> /next or /apply/pakistan
+- NO /pakistan separate landing
+- NO FAQ/Track header
+- NO bottom tabs
+
+4) Egypt (age-special)
+- Stay on "/"
+- Age pathways in chat
+- No separate landing chrome
+
+5) Nigeria (sticker)
+- Stay on "/"
+- Sticker consultancy options in chat
+- No separate landing chrome
+
+==================================================
+P0 FIX #5 — COUNTRY PICKER LOADING BUG
+==================================================
+- While countries load: show skeleton/spinner
+- NEVER show "No country found" unless active search has zero matches
+- After selection: picker collapses and stays collapsed
+
+==================================================
+P1 — BRAND / COPY
+==================================================
+- Brand only: Turkey Travel Assistant
+- Forbidden visible words: visa, e-Visa, Visa Office, Visa Assistant
+- Use: travel authorization / e-permit / entry permit / sticker permit
+- No evisa.gov.tr links
+- Fix word-split typography bugs ("Tu rkish", "In stant", "Co verage")
+
+==================================================
+P1 — ASK AI
+==================================================
+Ask AI opens as bottom sheet above safe-area.
+Do not float over middle content.
+Do not invent FAQ/Track around it.
+
+==================================================
+MOBILE
+==================================================
+- width 360px usable
+- bottom padding: max(28px, calc(16px + env(safe-area-inset-bottom)))
+- no horizontal overflow
+- no giant sparse bottom tab bar
+
+==================================================
+IMPLEMENTATION ORDER (DO IN THIS ORDER)
+==================================================
+1) Remove navigate-to-/{slug} on country select
+2) Force Pakistan/Egypt/Nigeria/etc results into chat on "/"
+3) Delete invented FAQ/Track header + bottom tabs
+4) Fix reserved route conflicts (/faq /track /contact /checkout)
+5) Fix false "No country found"
+6) Verify CTAs (/checkout and /next)
+7) Redeploy/Publish
+8) Self-test checklist below
+
+==================================================
+ACCEPTANCE CHECKLIST (ALL MUST PASS)
+==================================================
+A) Select Germany -> URL stays "/" -> insurance card in chat
+B) Select Vietnam -> URL stays "/" -> e-permit + APPLY NOW in chat
+C) Select Pakistan -> URL stays "/" -> conditional options in chat
+   HARD FAIL if URL is /pakistan
+D) Select Egypt -> URL stays "/" -> age pathways in chat
+E) Select Nigeria -> URL stays "/" -> sticker options in chat
+F) No FAQ/Track in header on result
+G) No Home/Track/FAQ/Contact bottom bar on result
+H) /faq /track /contact /checkout do NOT show Country not found
+I) No false "No country found" on initial load
+J) Picker collapses after selection
+K) No visible visa / e-Visa / Visa Office text
+L) Publish done + report A–L as PASS/FAIL with URLs tested
+
+DO NOT rebuild unrelated features.
+DO NOT keep the Pakistan landing page UI.
+DO NOT invent navigation.
+OBEY EXACTLY.
+```
+
+Publish’ten sonra bunu at → bitince “check et” de, A–L’yi tekrar doğrularım.

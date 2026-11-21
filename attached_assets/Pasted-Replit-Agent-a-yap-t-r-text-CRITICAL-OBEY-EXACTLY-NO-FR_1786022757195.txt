@@ -1,0 +1,137 @@
+Replit Agent’a yapıştır:
+
+```text
+CRITICAL. OBEY EXACTLY. NO FREESTYLE.
+Site: https://perfect-site.replit.app/
+Brand: Turkey Travel Assistant
+Forbidden visible words: visa, e-Visa, Visa Office, Visa Assistant
+Use: travel authorization / e-Permit / sticker permit / entry permit
+
+==================================================
+P0 — REMOVE THIS CHAT BUBBLE FROM COUNTRY FLOW
+==================================================
+DELETE the auto-generated assistant paragraph bubble that appears after country selection.
+
+Example of FORBIDDEN bubble (must never show again for any country):
+"As an Afghanistan passport holder, you may be eligible for a conditional e-Permit..."
+"As a Pakistan passport holder..."
+"As a German passport holder..."
+Any long AI-written intro paragraph after passport selection.
+
+After country select, flow must be ONLY:
+1) User chip / "Passport selected: {Country}"
+2) Optional short system line max 1 sentence OR none
+3) TOP BLOCK (TURKEY + COUNTRY badges + Get Your Travel Authorization + Requirements card)
+4) Category cards / options / insurance CTA
+5) APPLY NOW / Get travel insurance
+
+NO long narrative chat bubble before the top block.
+NO LLM-generated country intro text in the result stream.
+
+==================================================
+P0 — FULL COUNTRY CMS ADMIN (MUST BUILD / UPGRADE)
+==================================================
+Admin URL: /admin (login required)
+Goal: I must control ALL country chat content from admin without code changes.
+
+For EACH country, admin can edit and save:
+
+A) Publish controls
+- is_published (ON/OFF)
+- If OFF: country hidden from public picker OR shows "temporarily unavailable"
+- Publish / Unpublish toggle
+
+B) Identity
+- name
+- flag
+- category (exempt / direct_epermit / conditional / age_special / sticker_mission)
+- slug/id
+
+C) Top block content (appears in chat for that country)
+- badge_country_label (e.g. PAKISTAN)
+- title: default "Get Your Travel Authorization"
+- subtitle: "for {Country} Citizens" (editable)
+- support_line (editable, category-specific)
+- requirements_title: MUST default to "Travel Requirements for Turkey:"
+  (NO year, never auto-insert 2026)
+- passport_validity_text (default: Minimum 180 days)
+- max_stay_text (editable)
+- insurance_required (checkbox) + insurance_label (default Required)
+
+D) Main result content
+- summary_badge (e.g. Conditional e-Permit • 30 days single entry)
+- headline
+- body_html or body_text (short; shown in card, NOT as fake AI chat bubble)
+- insurance CTA enable/disable
+- insurance price_label / price_example
+
+E) Options (0–4 cards)
+For each option:
+- enabled true/false
+- title
+- price (number + currency text, e.g. 60 USD)
+- condition_text
+- bullets (list)
+- insurance_required badge
+- cta_label (default APPLY NOW)
+- cta_url (default /next or /apply/{slug})
+
+F) Extra
+- admin_html_notes (optional HTML under cards)
+- ai_extra_context (ONLY for Ask AI replies; must NOT auto-dump into the main country result stream)
+- sort_order
+- updated_at
+
+==================================================
+ADMIN UX REQUIREMENTS
+==================================================
+1) Login protected
+2) Country list + search + filter by category + published status
+3) Edit form with Save
+4) Preview panel showing exactly how chat result will look
+5) Publish/Unpublish button
+6) Changes appear immediately on public chat after save
+7) Do not require Redeploy for content edits
+
+==================================================
+PUBLIC CHAT RULES
+==================================================
+- Keep results on "/" inside chat
+- Show only published countries in picker
+- Render admin-managed fields in this order:
+  1. Passport selected chip
+  2. Top block (badges/title/requirements) — NO 2026
+  3. Main card / options from admin
+  4. CTAs
+- NEVER inject long AI intro bubble
+- NEVER invent FAQ/Track/bottom tab bar
+
+==================================================
+DATA / API
+==================================================
+- Persist overrides in DB or JSON overrides file
+- GET public countries = published only
+- PUT/PATCH admin country fields listed above
+- Validate prices as numbers
+- Sanitize HTML notes
+
+==================================================
+ACCEPTANCE (MUST PASS)
+==================================================
+A) Afghanistan/Pakistan/Germany select shows NO long "As a ... passport holder..." bubble
+B) Top block still shows for every country
+C) Requirements title has NO 2026
+D) Admin can edit price/title/support line/options and save
+E) Admin can unpublish a country and it disappears from public picker
+F) Admin can republish and it returns
+G) Changing option price in admin updates chat result without code edit
+H) Still no /pakistan separate landing with invented nav
+I) Redeploy + confirm with screenshots/PASS-FAIL list
+
+Do not redesign the whole app.
+Do not reintroduce AI intro bubbles.
+OBEY EXACTLY.
+Reply: "I did not change anything outside the prompt."
+```
+
+İstersen bir de admin alanlarının Türkçe etiket listesini (formda ne yazacak) ayrıca çıkarırım.

@@ -1,0 +1,67 @@
+```text
+Polish Turkey Travel Assistant opening screen to a true 10/10 on mobile and desktop.
+
+Current status is good, but fix these remaining issues exactly:
+
+1) POPULAR CHIPS (critical)
+- Each popular chip must show FLAG + CODE once only
+- Correct examples: 🇸🇦 SA, 🇪🇬 EG, 🇦🇪 AE, 🇨🇳 CN, 🇵🇰 PK, 🇮🇳 IN, 🇵🇭 PH
+- NEVER render duplicated text like “SA SA” or “PK PK”
+- If flag emoji fails, use a reliable flag image CDN, but still show code only once
+- Selected chip: navy border + checkmark, clear selected state
+
+2) LANGUAGE MENU
+- Header language control stays top-right: EN
+- Options: EN, ES, AR, FR, TR
+- Must close when:
+  - user selects a language
+  - user clicks outside
+  - user presses Escape
+- Menu must never overlap/stay stuck open over the chat
+- Default UI language: English
+- All opening-screen strings remain English by default
+
+3) COUNTRY LIST FLAGS
+- Every country row must show a real flag (emoji or image) + full name + code
+- No blank/gray placeholder flags
+- No broken “AF AF” style duplication
+
+4) HEADER LOGO
+- Replace yellow chat/document icon with a premium gold mosque mark
+- Keep “Turkey Travel Assistant” + green Online status
+
+5) MOBILE FIRST-SCREEN FIT (390x844)
+- Layout: 100dvh flex column = header / scroll area / composer
+- Welcome text: “Which country issued your passport?”
+- My passport card fits above composer
+- Country list scrolls INSIDE the card
+- First view should cleanly show:
+  welcome + search + popular chips + about 4 country rows
+- Composer placeholder: “Select your country…”
+- Trust line single and non-overlapping:
+  “AI guidance · Human travel experts available.”
+- Safe-area padding for iPhone bottom
+
+6) DESKTOP
+- Keep single centered chat column (max-width ~720px)
+- No left-stuck narrow panel
+- No dual-panel storyboard
+- Same polish as mobile
+
+7) AFTER COUNTRY SELECT
+- Collapse selector card
+- User bubble: 🇵🇰 PK (flag + code)
+- Assistant: “How can I help you?”
+- Unlock input: “Message Turkey Travel Assistant...”
+
+Acceptance checklist:
+[ ] No “SA SA” / duplicated chip text
+[ ] Language menu opens/closes cleanly
+[ ] Flags visible for chips + list
+[ ] Gold mosque logo
+[ ] Mobile first screen not cramped/cut off
+[ ] Desktop centered and premium
+[ ] Full English default UI
+
+Implement now and verify on mobile 390x844 and desktop 1440x900.
+```
